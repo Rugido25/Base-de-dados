@@ -1,0 +1,682 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Ferramenta de Captura de Leads</title>
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    // Tailwind config (opcional: tema escuro por classe)
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#eef2ff', 100: '#e0e7ff', 200: '#c7d2fe', 300: '#a5b4fc',
+              400: '#818cf8', 500: '#6366f1', 600: '#4f46e5', 700: '#4338ca',
+              800: '#3730a3', 900: '#312e81'
+            }
+          },
+          boxShadow: {
+            soft: '0 8px 30px rgba(0,0,0,0.06)'
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Supabase JS v2 -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <!-- SheetJS para import/export XLSX -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+  <!-- dayjs para datas -->
+  <script src="https://cdn.jsdelivr.net/npm/dayjs@1/dayjs.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/dayjs@1/plugin/utc.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/dayjs@1/plugin/timezone.js"></script>
+
+  <style>
+    html, body { height: 100%; }
+    .scroll-thin { scrollbar-width: thin; }
+    .scroll-thin::-webkit-scrollbar { height: 8px; width: 8px; }
+    .scroll-thin::-webkit-scrollbar-thumb { background: rgba(148, 163, 184, .6); border-radius: 999px; }
+  </style>
+</head>
+<body class="bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 transition-colors">
+  <!-- APP WRAPPER -->
+  <div class="min-h-screen">
+    <!-- NAVBAR -->
+    <header class="sticky top-0 z-40 backdrop-blur supports-[backdrop-filter]:bg-white/60 dark:supports-[backdrop-filter]:bg-slate-900/50 bg-white/80 dark:bg-slate-900/70 border-b border-slate-200/60 dark:border-slate-800">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="h-16 flex items-center justify-between">
+          <div class="flex items-center gap-3">
+            <div class="h-9 w-9 rounded-2xl bg-brand-600 flex items-center justify-center shadow-soft">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="h-5 w-5 text-white"><path fill="currentColor" d="M11 3a1 1 0 0 1 1 1v4h4a1 1 0 1 1 0 2h-4v4a1 1 0 1 1-2 0v-4H6a1 1 0 1 1 0-2h4V4a1 1 0 0 1 1-1Z"/></svg>
+            </div>
+            <div>
+              <h1 class="text-lg font-semibold leading-tight">Ferramenta de Captura de Leads</h1>
+              <p class="text-xs text-slate-500 dark:text-slate-400 -mt-0.5">Index único • Supabase • Importação/Exportação XLSX</p>
+            </div>
+          </div>
+          <div class="flex items-center gap-2">
+            <button id="btnSync" class="hidden md:inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm bg-brand-600 hover:bg-brand-700 text-white shadow-soft disabled:opacity-60" title="Sincronizar com o banco">
+              <svg class="h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="currentColor" d="M6.7 6.7A7 7 0 0 1 19 10h2a9 9 0 0 0-16.1-5.2L3 2v7h7L6.7 6.7Zm10.6 10.6A7 7 0 0 1 5 14H3a9 9 0 0 0 16.1 5.2L21 22v-7h-7l3.3 2.3Z"/></svg>
+              Sync
+            </button>
+            <button id="btnDark" class="inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800" title="Alternar tema claro/escuro">
+              <svg id="iconSun" class="h-4 w-4 hidden" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="currentColor" d="M12 18a6 6 0 1 0 0-12 6 6 0 0 0 0 12Zm0 4a1 1 0 0 1-1-1v-1h2v1a1 1 0 0 1-1 1ZM5 12a1 1 0 0 1-1 1H3v-2h1a1 1 0 0 1 1 1Zm8-9v1h-2V3a1 1 0 0 1 2 0ZM4.22 5.64l.7.7L4.2 7.06l-.7-.7a1 1 0 1 1 1.41-1.42Zm15.56 0a1 1 0 0 1 0 1.42l-.7.7l-1.41-1.41l.7-.7a1 1 0 0 1 1.41 0ZM20 11h1v2h-1a1 1 0 1 1 0-2ZM4.22 18.36A1 1 0 1 1 2.8 16.94l.7-.7l1.41 1.41l-.7.7ZM19.78 18.36l-.7-.7l-1.41 1.41l.7.7a1 1 0 0 1-1.41 1.41l-.7-.7l1.41-1.41l.7.7a1 1 0 0 1 1.41-1.41Z"/></svg>
+              <svg id="iconMoon" class="h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="currentColor" d="M21 12.79A9 9 0 1 1 11.21 3a7 7 0 1 0 9.79 9.79Z"/></svg>
+              <span class="sr-only">Tema</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- MAIN -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <!-- GRID: Form + Lista -->
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- FORM CARD -->
+        <section class="lg:col-span-1">
+          <div class="bg-white dark:bg-slate-900 rounded-2xl shadow-soft border border-slate-200 dark:border-slate-800 p-5">
+            <div class="flex items-start justify-between mb-4">
+              <div>
+                <h2 class="text-base font-semibold">Novo Lead</h2>
+                <p class="text-xs text-slate-500 dark:text-slate-400">Preencha os dados abaixo e salve.</p>
+              </div>
+              <span class="inline-flex items-center gap-1 text-[11px] px-2 py-1 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200/70 dark:border-slate-700">ID auto</span>
+            </div>
+
+            <form id="leadForm" class="space-y-4">
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label class="block text-xs font-medium mb-1" for="name">Nome*</label>
+                  <input id="name" required type="text" class="w-full rounded-xl border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500" placeholder="Ex.: Maria Silva" />
+                </div>
+                <div>
+                  <label class="block text-xs font-medium mb-1" for="email">E-mail</label>
+                  <input id="email" type="email" class="w-full rounded-xl border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500" placeholder="maria@email.com" />
+                </div>
+                <div>
+                  <label class="block text-xs font-medium mb-1" for="phone">Telefone/Whats</label>
+                  <input id="phone" type="tel" class="w-full rounded-xl border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500" placeholder="(00) 90000-0000" />
+                </div>
+                <div>
+                  <label class="block text-xs font-medium mb-1" for="source">Origem</label>
+                  <select id="source" class="w-full rounded-xl border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500">
+                    <option value="">Selecione…</option>
+                    <option>Instagram</option>
+                    <option>Google</option>
+                    <option>Indicação</option>
+                    <option>Portal</option>
+                    <option>Loja física</option>
+                    <option>Outro</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label class="block text-xs font-medium mb-1" for="interest">Interesse</label>
+                  <input id="interest" type="text" class="w-full rounded-xl border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500" placeholder="Produto/Serviço" />
+                </div>
+                <div>
+                  <label class="block text-xs font-medium mb-1" for="status">Status</label>
+                  <select id="status" class="w-full rounded-xl border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500">
+                    <option>Novo</option>
+                    <option>Contato feito</option>
+                    <option>Qualificado</option>
+                    <option>Ganho</option>
+                    <option>Perdido</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label class="block text-xs font-medium mb-1" for="notes">Observações</label>
+                <textarea id="notes" rows="3" class="w-full rounded-xl border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500" placeholder="Contexto, objeções, prazos…"></textarea>
+              </div>
+
+              <div class="flex items-center gap-2">
+                <input id="consent" type="checkbox" class="rounded border-slate-300 dark:border-slate-700 text-brand-600 focus:ring-brand-500" />
+                <label for="consent" class="text-xs">Autorizo contato (LGPD)</label>
+              </div>
+
+              <div class="flex items-center gap-2 pt-1">
+                <button id="btnSave" type="submit" class="inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm bg-brand-600 hover:bg-brand-700 text-white shadow-soft">
+                  <svg class="h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="currentColor" d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2ZM6 6v12h12V9h-4a1 1 0 0 1-1-1V4H6Zm2 11h8v-2H8v2Z"/></svg>
+                  Salvar lead
+                </button>
+                <button id="btnClear" type="button" class="inline-flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800">
+                  Limpar
+                </button>
+              </div>
+            </form>
+          </div>
+
+          <!-- IMPORT / EXPORT CARD -->
+          <div class="mt-6 bg-white dark:bg-slate-900 rounded-2xl shadow-soft border border-slate-200 dark:border-slate-800 p-5">
+            <div class="flex items-center justify-between mb-4">
+              <h3 class="text-base font-semibold">Importar / Exportar</h3>
+            </div>
+            <div class="flex flex-col sm:flex-row gap-3">
+              <button id="btnExport" class="inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm bg-slate-900 text-white dark:bg-white dark:text-slate-900">
+                <svg class="h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="currentColor" d="M12 3a1 1 0 0 1 1 1v9.59l2.3-2.3a1 1 0 0 1 1.4 1.42l-4 4a1 1 0 0 1-1.4 0l-4-4a1 1 0 0 1 1.4-1.42l2.3 2.3V4a1 1 0 0 1 1-1ZM5 20a1 1 0 0 1 0-2h14a1 1 0 1 1 0 2H5Z"/></svg>
+                Exportar XLSX
+              </button>
+              <label class="inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm border border-slate-200 dark:border-slate-700 cursor-pointer">
+                <input id="fileImport" type="file" accept=".xlsx,.csv" class="hidden" />
+                <svg class="h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="currentColor" d="M12 3a1 1 0 0 0-1 1v9.59l-2.3-2.3a1 1 0 1 0-1.4 1.42l4 4a1 1 0 0 0 1.4 0l4-4a1 1 0 0 0-1.4-1.42l-2.3 2.3V4a1 1 0 0 0-1-1ZM5 20a1 1 0 1 0 0-2h14a1 1 0 1 0 0 2H5Z"/></svg>
+                Importar XLSX/CSV
+              </label>
+            </div>
+            <p class="mt-2 text-xs text-slate-500 dark:text-slate-400">Colunas suportadas: <code>name, email, phone, source, interest, status, notes</code>.</p>
+          </div>
+        </section>
+
+        <!-- LISTA CARD -->
+        <section class="lg:col-span-2">
+          <div class="bg-white dark:bg-slate-900 rounded-2xl shadow-soft border border-slate-200 dark:border-slate-800 p-5">
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+              <div>
+                <h2 class="text-base font-semibold">Leads</h2>
+                <p class="text-xs text-slate-500 dark:text-slate-400">Pesquisar, filtrar e gerenciar.</p>
+              </div>
+              <div class="flex flex-wrap items-center gap-2">
+                <div class="relative">
+                  <svg class="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="currentColor" d="M15.5 14h-.79l-.28-.27A6.5 6.5 0 1 0 14 15.5l.27.28v.79l4.25 4.25a1 1 0 0 0 1.41-1.41L15.5 14Zm-6 0A4.5 4.5 0 1 1 14 9.5 4.5 4.5 0 0 1 9.5 14Z"/></svg>
+                  <input id="search" placeholder="Buscar por nome, e-mail, interesse…" class="pl-9 pr-3 py-2 rounded-xl text-sm border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 w-64" />
+                </div>
+                <select id="filterSource" class="rounded-xl text-sm border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 px-2 py-2">
+                  <option value="">Todas as origens</option>
+                  <option>Instagram</option>
+                  <option>Google</option>
+                  <option>Indicação</option>
+                  <option>Portal</option>
+                  <option>Loja física</option>
+                  <option>Outro</option>
+                </select>
+                <select id="filterStatus" class="rounded-xl text-sm border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 px-2 py-2">
+                  <option value="">Todos os status</option>
+                  <option>Novo</option>
+                  <option>Contato feito</option>
+                  <option>Qualificado</option>
+                  <option>Ganho</option>
+                  <option>Perdido</option>
+                </select>
+                <button id="btnReload" class="inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800">
+                  <svg class="h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="currentColor" d="M6.7 6.7A7 7 0 0 1 19 10h2a9 9 0 0 0-16.1-5.2L3 2v7h7L6.7 6.7Zm10.6 10.6A7 7 0 0 1 5 14H3a9 9 0 0 0 16.1 5.2L21 22v-7h-7l3.3 2.3Z"/></svg>
+                  Atualizar
+                </button>
+              </div>
+            </div>
+
+            <div class="overflow-auto scroll-thin rounded-xl border border-slate-200 dark:border-slate-800">
+              <table class="min-w-full divide-y divide-slate-200 dark:divide-slate-800">
+                <thead class="bg-slate-50 dark:bg-slate-950">
+                  <tr class="text-left text-[11px] uppercase tracking-wide text-slate-500">
+                    <th class="px-4 py-3">Nome</th>
+                    <th class="px-4 py-3">Contato</th>
+                    <th class="px-4 py-3">Origem</th>
+                    <th class="px-4 py-3">Interesse</th>
+                    <th class="px-4 py-3">Status</th>
+                    <th class="px-4 py-3">Criado</th>
+                    <th class="px-4 py-3 text-right">Ações</th>
+                  </tr>
+                </thead>
+                <tbody id="tbody" class="divide-y divide-slate-200 dark:divide-slate-800 text-sm"></tbody>
+              </table>
+            </div>
+
+            <!-- Pagination -->
+            <div class="flex items-center justify-between mt-4">
+              <p id="countInfo" class="text-xs text-slate-500 dark:text-slate-400">0 leads</p>
+              <div class="flex items-center gap-2">
+                <button id="prevPage" class="px-3 py-1.5 text-sm rounded-lg border border-slate-200 dark:border-slate-700 disabled:opacity-40">Anterior</button>
+                <span id="pageLabel" class="text-xs text-slate-500 dark:text-slate-400">1</span>
+                <button id="nextPage" class="px-3 py-1.5 text-sm rounded-lg border border-slate-200 dark:border-slate-700 disabled:opacity-40">Próxima</button>
+              </div>
+            </div>
+          </div>
+        </section>
+      </div>
+    </main>
+  </div>
+
+  <!-- MODAL (View/Edit) -->
+  <div id="modal" class="fixed inset-0 z-50 hidden">
+    <div class="absolute inset-0 bg-slate-900/50 backdrop-blur-sm"></div>
+    <div class="relative max-w-2xl mx-auto mt-20 bg-white dark:bg-slate-900 rounded-2xl shadow-soft border border-slate-200 dark:border-slate-800 p-6">
+      <div class="flex items-start justify-between mb-4">
+        <h3 class="text-base font-semibold">Detalhes do Lead</h3>
+        <button id="modalClose" class="rounded-xl p-2 hover:bg-slate-100 dark:hover:bg-slate-800">
+          <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="currentColor" d="M6.4 5l12.7 12.7l-1.4 1.4L5 6.4L6.4 5Zm12.7 1.4L6.4 19.1L5 17.7L17.7 5l1.4 1.4Z"/></svg>
+        </button>
+      </div>
+      <form id="editForm" class="space-y-3">
+        <input type="hidden" id="editId" />
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs mb-1" for="editName">Nome</label>
+            <input id="editName" class="w-full rounded-xl border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 px-3 py-2 text-sm" />
+          </div>
+          <div>
+            <label class="block text-xs mb-1" for="editEmail">E-mail</label>
+            <input id="editEmail" type="email" class="w-full rounded-xl border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 px-3 py-2 text-sm" />
+          </div>
+          <div>
+            <label class="block text-xs mb-1" for="editPhone">Telefone</label>
+            <input id="editPhone" class="w-full rounded-xl border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 px-3 py-2 text-sm" />
+          </div>
+          <div>
+            <label class="block text-xs mb-1" for="editSource">Origem</label>
+            <select id="editSource" class="w-full rounded-xl border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 px-3 py-2 text-sm">
+              <option value="">Selecione…</option>
+              <option>Instagram</option>
+              <option>Google</option>
+              <option>Indicação</option>
+              <option>Portal</option>
+              <option>Loja física</option>
+              <option>Outro</option>
+            </select>
+          </div>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs mb-1" for="editInterest">Interesse</label>
+            <input id="editInterest" class="w-full rounded-xl border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 px-3 py-2 text-sm" />
+          </div>
+          <div>
+            <label class="block text-xs mb-1" for="editStatus">Status</label>
+            <select id="editStatus" class="w-full rounded-xl border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 px-3 py-2 text-sm">
+              <option>Novo</option>
+              <option>Contato feito</option>
+              <option>Qualificado</option>
+              <option>Ganho</option>
+              <option>Perdido</option>
+            </select>
+          </div>
+        </div>
+        <div>
+          <label class="block text-xs mb-1" for="editNotes">Observações</label>
+          <textarea id="editNotes" rows="3" class="w-full rounded-xl border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 px-3 py-2 text-sm"></textarea>
+        </div>
+        <div class="flex items-center gap-2 justify-between pt-2">
+          <div class="flex items-center gap-2">
+            <input id="editConsent" type="checkbox" class="rounded border-slate-300 dark:border-slate-700 text-brand-600" />
+            <label for="editConsent" class="text-xs">Consentimento LGPD</label>
+          </div>
+          <div class="flex items-center gap-2">
+            <button id="btnDelete" type="button" class="inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm border border-red-300 text-red-700 dark:border-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20">Excluir</button>
+            <button class="inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm bg-brand-600 hover:bg-brand-700 text-white">Salvar alterações</button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- TOASTS -->
+  <div id="toast" class="fixed bottom-4 left-1/2 -translate-x-1/2 hidden"></div>
+
+  <script>
+    // ==== CONFIG SUPABASE ====================================================
+    // >> Substitua pelas suas credenciais (URL e KEY) <<
+    const SUPABASE_URL = window.localStorage.getItem('sb_url') || 'https://YOUR-PROJECT.supabase.co';
+    const SUPABASE_KEY = window.localStorage.getItem('sb_key') || 'YOUR-ANON-KEY';
+
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+    // Opcional: persistir no navegador para facilitar testes
+    window.saveSbCreds = (url, key) => {
+      localStorage.setItem('sb_url', url);
+      localStorage.setItem('sb_key', key);
+      showToast('Credenciais salvas no navegador.');
+    }
+
+    // ==== STATE ==============================================================
+    const state = {
+      rows: [],
+      page: 1,
+      pageSize: 10,
+      total: 0,
+      filters: {
+        q: '',
+        source: '',
+        status: ''
+      }
+    }
+
+    dayjs.extend(window.dayjs_plugin_utc);
+    dayjs.extend(window.dayjs_plugin_timezone);
+
+    // ==== HELPERS ============================================================
+    const $ = (sel) => document.querySelector(sel);
+
+    function fmtDate(iso) {
+      if (!iso) return '-';
+      return dayjs(iso).format('DD/MM/YYYY HH:mm');
+    }
+
+    function badgeStatus(s) {
+      const map = {
+        'Novo': 'bg-sky-100 text-sky-700 dark:bg-sky-900/30 dark:text-sky-300',
+        'Contato feito': 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300',
+        'Qualificado': 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300',
+        'Ganho': 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300',
+        'Perdido': 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300'
+      }
+      const cls = map[s] || 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300';
+      return `<span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] ${cls}">${s || '-'}</span>`;
+    }
+
+    function showToast(msg, type='ok') {
+      const toast = $('#toast');
+      const base = 'rounded-xl px-4 py-2 shadow-soft border text-sm';
+      const theme = type === 'err'
+        ? 'bg-rose-50 border-rose-200 text-rose-700 dark:bg-rose-900/30 dark:text-rose-200 dark:border-rose-800'
+        : 'bg-emerald-50 border-emerald-200 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-200 dark:border-emerald-800';
+      toast.className = `${base} ${theme} fixed bottom-4 left-1/2 -translate-x-1/2`;
+      toast.textContent = msg;
+      toast.style.display = 'block';
+      setTimeout(() => toast.style.display = 'none', 2600);
+    }
+
+    function phoneMask(v) {
+      if (!v) return '';
+      const digits = v.replace(/\D/g, '').slice(0, 11);
+      if (digits.length <= 10) {
+        return digits
+          .replace(/(\d{2})(\d)/, '($1) $2')
+          .replace(/(\d{4})(\d)/, '$1-$2');
+      }
+      return digits
+        .replace(/(\d{2})(\d)/, '($1) $2')
+        .replace(/(\d{5})(\d)/, '$1-$2');
+    }
+
+    // ==== DATA ACCESS ========================================================
+    async function fetchLeads() {
+      const { q, source, status } = state.filters;
+      const from = (state.page - 1) * state.pageSize;
+      const to = from + state.pageSize - 1;
+
+      let query = supabase.from('leads').select('*', { count: 'exact' }).order('created_at', { ascending: false }).range(from, to);
+
+      if (source) query = query.eq('source', source);
+      if (status) query = query.eq('status', status);
+      if (q) {
+        // busca ingênua: filtra depois (workaround simples)
+        // alternativa: usar pg_trgm/FTS no banco
+      }
+
+      const { data, error, count } = await query;
+      if (error) { console.error(error); showToast('Erro ao carregar leads', 'err'); return; }
+
+      // client-side search (q)
+      let rows = data || [];
+      if (q) {
+        const t = q.toLowerCase();
+        rows = rows.filter(r => [r.name, r.email, r.phone, r.interest, r.notes].some(x => (x || '').toLowerCase().includes(t)));
+      }
+
+      state.rows = rows;
+      state.total = count || rows.length;
+      renderTable();
+    }
+
+    async function insertLead(payload) {
+      const { data, error } = await supabase.from('leads').insert(payload).select().single();
+      if (error) throw error;
+      return data;
+    }
+
+    async function updateLead(id, payload) {
+      const { data, error } = await supabase.from('leads').update(payload).eq('id', id).select().single();
+      if (error) throw error;
+      return data;
+    }
+
+    async function deleteLead(id) {
+      const { error } = await supabase.from('leads').delete().eq('id', id);
+      if (error) throw error;
+      return true;
+    }
+
+    // ==== RENDER =============================================================
+    function renderTable() {
+      const tbody = $('#tbody');
+      tbody.innerHTML = '';
+
+      for (const r of state.rows) {
+        const tr = document.createElement('tr');
+        tr.className = 'hover:bg-slate-50 dark:hover:bg-slate-800/60';
+        tr.innerHTML = `
+          <td class="px-4 py-3">
+            <div class="font-medium">${r.name || '-'}</div>
+            <div class="text-xs text-slate-500">${r.id || ''}</div>
+          </td>
+          <td class="px-4 py-3">
+            <div class="text-sm">${r.email || '-'}</div>
+            <div class="text-xs text-slate-500">${r.phone || '-'}</div>
+          </td>
+          <td class="px-4 py-3">${r.source || '-'}</td>
+          <td class="px-4 py-3">${r.interest || '-'}</td>
+          <td class="px-4 py-3">${badgeStatus(r.status || 'Novo')}</td>
+          <td class="px-4 py-3">${fmtDate(r.created_at)}</td>
+          <td class="px-4 py-3">
+            <div class="flex items-center justify-end gap-2">
+              <button class="px-2 py-1.5 text-xs rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800" data-action="edit" data-id="${r.id}">Editar</button>
+              <button class="px-2 py-1.5 text-xs rounded-lg border border-rose-300 text-rose-700 dark:border-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-900/20" data-action="remove" data-id="${r.id}">Excluir</button>
+            </div>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      }
+
+      $('#countInfo').textContent = `${state.total} lead${state.total === 1 ? '' : 's'}`;
+      $('#pageLabel').textContent = `${state.page}`;
+
+      // bind actions
+      tbody.querySelectorAll('button[data-action="edit"]').forEach(btn => btn.addEventListener('click', () => openEdit(btn.dataset.id)));
+      tbody.querySelectorAll('button[data-action="remove"]').forEach(btn => btn.addEventListener('click', () => onDelete(btn.dataset.id)));
+    }
+
+    // ==== UI ACTIONS =========================================================
+    $('#btnDark').addEventListener('click', () => {
+      const isDark = document.documentElement.classList.toggle('dark');
+      $('#iconMoon').classList.toggle('hidden', isDark);
+      $('#iconSun').classList.toggle('hidden', !isDark);
+      localStorage.setItem('theme', isDark ? 'dark' : 'light');
+    });
+
+    function applyTheme() {
+      const pref = localStorage.getItem('theme') || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+      document.documentElement.classList.toggle('dark', pref === 'dark');
+      $('#iconMoon').classList.toggle('hidden', pref === 'dark');
+      $('#iconSun').classList.toggle('hidden', pref !== 'dark');
+    }
+
+    $('#phone').addEventListener('input', (e) => e.target.value = phoneMask(e.target.value));
+
+    $('#leadForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const payload = {
+        name: $('#name').value.trim(),
+        email: $('#email').value.trim() || null,
+        phone: $('#phone').value.trim() || null,
+        source: $('#source').value || null,
+        interest: $('#interest').value.trim() || null,
+        status: $('#status').value || 'Novo',
+        notes: $('#notes').value.trim() || null,
+        consent: $('#consent').checked,
+      }
+      if (!payload.name) { showToast('Nome é obrigatório', 'err'); return; }
+
+      try {
+        const saved = await insertLead(payload);
+        showToast('Lead salvo com sucesso!');
+        e.target.reset();
+        state.page = 1;
+        await fetchLeads();
+      } catch (err) {
+        console.error(err); showToast('Erro ao salvar lead', 'err');
+      }
+    });
+
+    $('#btnClear').addEventListener('click', () => $('#leadForm').reset());
+
+    $('#btnReload').addEventListener('click', async () => { state.page = 1; await fetchLeads(); showToast('Lista atualizada'); });
+    $('#btnSync').addEventListener('click', async () => { state.page = 1; await fetchLeads(); showToast('Sincronizado'); });
+
+    $('#search').addEventListener('input', (e) => { state.filters.q = e.target.value; fetchLeads(); });
+    $('#filterSource').addEventListener('change', (e) => { state.filters.source = e.target.value; state.page = 1; fetchLeads(); });
+    $('#filterStatus').addEventListener('change', (e) => { state.filters.status = e.target.value; state.page = 1; fetchLeads(); });
+
+    $('#prevPage').addEventListener('click', async () => { if (state.page > 1) { state.page--; await fetchLeads(); }});
+    $('#nextPage').addEventListener('click', async () => { const maxPage = Math.ceil(state.total / state.pageSize) || 1; if (state.page < maxPage) { state.page++; await fetchLeads(); }});
+
+    // MODAL
+    function openEdit(id) {
+      const row = state.rows.find(r => r.id == id);
+      if (!row) return;
+      $('#editId').value = row.id;
+      $('#editName').value = row.name || '';
+      $('#editEmail').value = row.email || '';
+      $('#editPhone').value = row.phone || '';
+      $('#editSource').value = row.source || '';
+      $('#editInterest').value = row.interest || '';
+      $('#editStatus').value = row.status || 'Novo';
+      $('#editNotes').value = row.notes || '';
+      $('#editConsent').checked = !!row.consent;
+      $('#modal').classList.remove('hidden');
+    }
+
+    $('#modalClose').addEventListener('click', () => $('#modal').classList.add('hidden'));
+    window.addEventListener('keydown', (e) => { if (e.key === 'Escape') $('#modal').classList.add('hidden') })
+
+    $('#editForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const id = $('#editId').value;
+      const payload = {
+        name: $('#editName').value.trim(),
+        email: $('#editEmail').value.trim() || null,
+        phone: $('#editPhone').value.trim() || null,
+        source: $('#editSource').value || null,
+        interest: $('#editInterest').value.trim() || null,
+        status: $('#editStatus').value || 'Novo',
+        notes: $('#editNotes').value.trim() || null,
+        consent: $('#editConsent').checked,
+      }
+      try {
+        await updateLead(id, payload);
+        showToast('Lead atualizado');
+        $('#modal').classList.add('hidden');
+        await fetchLeads();
+      } catch (err) {
+        console.error(err); showToast('Erro ao atualizar', 'err');
+      }
+    })
+
+    $('#btnDelete').addEventListener('click', async () => {
+      const id = $('#editId').value;
+      if (!confirm('Confirma excluir este lead?')) return;
+      try {
+        await deleteLead(id);
+        showToast('Lead excluído');
+        $('#modal').classList.add('hidden');
+        await fetchLeads();
+      } catch (err) { console.error(err); showToast('Erro ao excluir', 'err'); }
+    })
+
+    // EXPORT XLSX
+    $('#btnExport').addEventListener('click', async () => {
+      try {
+        // baixa tudo (sem paginação) para exportar
+        const { data, error } = await supabase.from('leads').select('*').order('created_at', { ascending: false });
+        if (error) throw error;
+        const rows = (data || []).map(r => ({
+          id: r.id,
+          name: r.name,
+          email: r.email,
+          phone: r.phone,
+          source: r.source,
+          interest: r.interest,
+          status: r.status,
+          notes: r.notes,
+          consent: r.consent,
+          created_at: r.created_at,
+          updated_at: r.updated_at,
+        }));
+        const ws = XLSX.utils.json_to_sheet(rows);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, 'Leads');
+        const fname = `leads_${dayjs().format('YYYYMMDD_HHmm')}.xlsx`;
+        XLSX.writeFile(wb, fname);
+        showToast('Arquivo exportado');
+      } catch (err) { console.error(err); showToast('Erro ao exportar', 'err'); }
+    });
+
+    // IMPORT XLSX/CSV
+    $('#fileImport').addEventListener('change', async (e) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+      try {
+        const buf = await file.arrayBuffer();
+        const wb = XLSX.read(buf, { type: 'array' });
+        const ws = wb.Sheets[wb.SheetNames[0]];
+        const json = XLSX.utils.sheet_to_json(ws, { defval: '' });
+
+        const payloads = json.map(row => ({
+          name: (row.name || row.Nome || '').toString().trim(),
+          email: (row.email || row.Email || '').toString().trim() || null,
+          phone: (row.phone || row.Telefone || '').toString().trim() || null,
+          source: (row.source || row.Origem || '').toString().trim() || null,
+          interest: (row.interest || row.Interesse || '').toString().trim() || null,
+          status: (row.status || row.Status || 'Novo').toString().trim() || 'Novo',
+          notes: (row.notes || row.Observacoes || '').toString().trim() || null,
+          consent: !!(row.consent || row.Consentimento || row.LGPD),
+        })).filter(p => p.name);
+
+        if (!payloads.length) { showToast('Nenhuma linha válida encontrada', 'err'); return; }
+
+        const { error } = await supabase.from('leads').insert(payloads);
+        if (error) throw error;
+        showToast(`Importação concluída (${payloads.length} itens)`);
+        e.target.value = '';
+        await fetchLeads();
+      } catch (err) { console.error(err); showToast('Erro ao importar', 'err'); }
+    });
+
+    // ==== INIT ===============================================================
+    async function ensureTable() {
+      // Dica: crie a tabela no Supabase (SQL):
+      // create table if not exists public.leads (
+      //   id bigint generated by default as identity primary key,
+      //   name text not null,
+      //   email text,
+      //   phone text,
+      //   source text,
+      //   interest text,
+      //   status text default 'Novo',
+      //   notes text,
+      //   consent boolean default false,
+      //   created_at timestamptz default now(),
+      //   updated_at timestamptz default now()
+      // );
+      // create trigger set_timestamp before update on public.leads for each row execute procedure trigger_set_timestamp();
+      // (Ou use Row Level Security com políticas conforme sua necessidade.)
+    }
+
+    (async function start() {
+      applyTheme();
+      await ensureTable();
+      await fetchLeads();
+    })();
+  </script>
+</body>
+</html>
