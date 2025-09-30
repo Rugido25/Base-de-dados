@@ -99,8 +99,8 @@
                   <input id="email" type="email" class="w-full rounded-xl border-gray-400 dark:border-slate-700 bg-white dark:bg-slate-950 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500" placeholder="maria@email.com" />
                 </div>
                 <div>
-                  <label class="block text-xs font-medium mb-1" for="phone">Telefone/Whats</label>
-                  <input id="phone" type="tel" class="w-full rounded-xl border-gray-400 dark:border-slate-700 bg-white dark:bg-slate-950 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500" placeholder="(00) 90000-0000" />
+                  <label class="block text-xs font-medium mb-1" for="phone">Telefone/Whats*</label>
+                  <input id="phone" required type="tel" class="w-full rounded-xl border-gray-400 dark:border-slate-700 bg-white dark:bg-slate-950 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500" placeholder="(00) 90000-0000" />
                 </div>
                 <div>
                   <label class="block text-xs font-medium mb-1" for="source">Origem</label>
@@ -112,12 +112,16 @@
                     <option>Vanguarda</option>
                   </select>
                 </div>
-              </div>
-
-              <div class="grid grid-cols-1 sm:grid-cols-1 gap-3">
+                 <div>
+                  <div class="flex justify-between items-center mb-1">
+                    <label class="block text-xs font-medium" for="interest">Interesse</label>
+                    <span id="interestCounter" class="text-[11px] text-slate-500 dark:text-slate-400">0/50</span>
+                  </div>
+                  <input id="interest" type="text" maxlength="50" class="w-full rounded-xl border-gray-400 dark:border-slate-700 bg-white dark:bg-slate-950 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500" placeholder="Produto/Serviço" />
+                </div>
                 <div>
-                  <label class="block text-xs font-medium mb-1" for="interest">Interesse</label>
-                  <input id="interest" type="text" class="w-full rounded-xl border-gray-400 dark:border-slate-700 bg-white dark:bg-slate-950 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500" placeholder="Produto/Serviço" />
+                  <label class="block text-xs font-medium mb-1" for="bdrName">Nome do BDR*</label>
+                  <input id="bdrName" required type="text" class="w-full rounded-xl border-gray-400 dark:border-slate-700 bg-white dark:bg-slate-950 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500" placeholder="Ex.: João P." />
                 </div>
               </div>
 
@@ -154,7 +158,7 @@
                 Importar XLSX/CSV
               </label>
             </div>
-            <p class="mt-2 text-xs text-slate-500 dark:text-slate-400">Colunas suportadas: <code>name, email, phone, source, interest, notes</code>.</p>
+            <p class="mt-2 text-xs text-slate-500 dark:text-slate-400">Colunas suportadas: <code>name, email, phone, source, interest, notes, nome_bdr</code>.</p>
           </div>
         </section>
 
@@ -205,6 +209,7 @@
                     <th class="px-4 py-3">Contato</th>
                     <th class="px-4 py-3">Origem</th>
                     <th class="px-4 py-3">Interesse</th>
+                    <th class="px-4 py-3">BDR</th>
                     <th class="px-4 py-3">Criado</th>
                     <th class="px-4 py-3 text-right">Ações</th>
                   </tr>
@@ -242,16 +247,16 @@
         <input type="hidden" id="editId" />
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
-            <label class="block text-xs mb-1" for="editName">Nome</label>
-            <input id="editName" class="w-full rounded-xl border-gray-400 dark:border-slate-700 bg-white dark:bg-slate-950 px-3 py-2 text-sm" />
+            <label class="block text-xs mb-1" for="editName">Nome*</label>
+            <input id="editName" required class="w-full rounded-xl border-gray-400 dark:border-slate-700 bg-white dark:bg-slate-950 px-3 py-2 text-sm" />
           </div>
           <div>
             <label class="block text-xs mb-1" for="editEmail">E-mail</label>
             <input id="editEmail" type="email" class="w-full rounded-xl border-gray-400 dark:border-slate-700 bg-white dark:bg-slate-950 px-3 py-2 text-sm" />
           </div>
           <div>
-            <label class="block text-xs mb-1" for="editPhone">Telefone</label>
-            <input id="editPhone" class="w-full rounded-xl border-gray-400 dark:border-slate-700 bg-white dark:bg-slate-950 px-3 py-2 text-sm" />
+            <label class="block text-xs mb-1" for="editPhone">Telefone*</label>
+            <input id="editPhone" required class="w-full rounded-xl border-gray-400 dark:border-slate-700 bg-white dark:bg-slate-950 px-3 py-2 text-sm" />
           </div>
           <div>
             <label class="block text-xs mb-1" for="editSource">Origem</label>
@@ -263,11 +268,16 @@
               <option>Vanguarda</option>
             </select>
           </div>
-        </div>
-        <div class="grid grid-cols-1 sm:grid-cols-1 gap-3">
+           <div>
+            <div class="flex justify-between items-center mb-1">
+              <label class="block text-xs font-medium" for="editInterest">Interesse</label>
+              <span id="editInterestCounter" class="text-[11px] text-slate-500 dark:text-slate-400">0/50</span>
+            </div>
+            <input id="editInterest" maxlength="50" class="w-full rounded-xl border-gray-400 dark:border-slate-700 bg-white dark:bg-slate-950 px-3 py-2 text-sm" />
+          </div>
           <div>
-            <label class="block text-xs mb-1" for="editInterest">Interesse</label>
-            <input id="editInterest" class="w-full rounded-xl border-gray-400 dark:border-slate-700 bg-white dark:bg-slate-950 px-3 py-2 text-sm" />
+            <label class="block text-xs mb-1" for="editBdrName">Nome do BDR*</label>
+            <input id="editBdrName" required class="w-full rounded-xl border-gray-400 dark:border-slate-700 bg-white dark:bg-slate-950 px-3 py-2 text-sm" />
           </div>
         </div>
         <div>
@@ -370,6 +380,24 @@
         .replace(/(\d{2})(\d)/, '($1) $2')
         .replace(/(\d{5})(\d)/, '$1-$2');
     }
+    
+    function setupCharCounter(inputId, counterId, maxLength) {
+        const input = $(inputId);
+        const counter = $(counterId);
+        
+        const updateCount = () => {
+            if (input && counter) {
+                const currentLength = input.value.length;
+                counter.textContent = `${currentLength}/${maxLength}`;
+            }
+        };
+
+        if (input) {
+            input.addEventListener('input', updateCount);
+        }
+        
+        return updateCount; 
+    }
 
     // ==== DATA ACCESS ========================================================
     async function fetchLeads() {
@@ -391,7 +419,7 @@
       let rows = data || [];
       if (q) {
         const t = q.toLowerCase();
-        rows = rows.filter(r => [r.name, r.email, r.phone, r.interest, r.notes].some(x => (x || '').toLowerCase().includes(t)));
+        rows = rows.filter(r => [r.name, r.email, r.phone, r.interest, r.notes, r.nome_bdr].some(x => (x || '').toLowerCase().includes(t)));
       }
 
       state.rows = rows;
@@ -423,7 +451,7 @@
       tbody.innerHTML = '';
 
       if (state.rows.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="7" class="text-center p-8 text-slate-500">Nenhum lead encontrado.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="8" class="text-center p-8 text-slate-500">Nenhum lead encontrado.</td></tr>`;
       } else {
         for (const r of state.rows) {
           const isChecked = state.selectedIds.includes(r.id);
@@ -443,6 +471,7 @@
             </td>
             <td class="px-4 py-3">${r.source || '-'}</td>
             <td class="px-4 py-3">${r.interest || '-'}</td>
+            <td class="px-4 py-3">${r.nome_bdr || '-'}</td>
             <td class="px-4 py-3">${fmtDate(r.created_at)}</td>
             <td class="px-4 py-3">
               <div class="flex items-center justify-end gap-2">
@@ -491,8 +520,12 @@
         source: $('#source').value || null,
         interest: $('#interest').value.trim() || null,
         notes: $('#notes').value.trim() || null,
+        nome_bdr: $('#bdrName').value.trim() || null,
       }
       if (!payload.name) { showToast('Nome é obrigatório', 'err'); return; }
+      if (!payload.phone) { showToast('Telefone é obrigatório', 'err'); return; }
+      if (!payload.nome_bdr) { showToast('Nome do BDR é obrigatório', 'err'); return; }
+
 
       try {
         await insertLead(payload);
@@ -506,7 +539,10 @@
       }
     });
 
-    $('#btnClear').addEventListener('click', () => $('#leadForm').reset());
+    $('#btnClear').addEventListener('click', () => {
+      $('#leadForm').reset();
+      updateInterestCounter();
+    });
 
     $('#btnReload').addEventListener('click', async (e) => {
       state.page = 1;
@@ -530,6 +566,8 @@
       $('#editPhone').value = phoneMask(row.phone);
       $('#editSource').value = row.source || '';
       $('#editInterest').value = row.interest || '';
+      updateEditInterestCounter();
+      $('#editBdrName').value = row.nome_bdr || '';
       $('#editNotes').value = row.notes || '';
       $('#modal').classList.remove('hidden');
     }
@@ -547,6 +585,11 @@
         source: $('#editSource').value || null,
         interest: $('#editInterest').value.trim() || null,
         notes: $('#editNotes').value.trim() || null,
+        nome_bdr: $('#editBdrName').value.trim() || null,
+      }
+      if (!payload.name || !payload.phone || !payload.nome_bdr) {
+        showToast('Preencha todos os campos obrigatórios (*).', 'err');
+        return;
       }
       try {
         await updateLead(id, payload);
@@ -577,8 +620,9 @@
         if (error) throw error;
         const rows = (data || []).map(r => ({
           id: r.id, name: r.name, email: r.email, phone: r.phone,
-          source: r.source, interest: r.interest,
-          notes: r.notes, created_at: r.created_at, updated_at: r.updated_at,
+          source: r.source, interest: r.interest, notes: r.notes,
+          nome_bdr: r.nome_bdr,
+          created_at: r.created_at, updated_at: r.updated_at,
         }));
         const ws = XLSX.utils.json_to_sheet(rows);
         const wb = XLSX.utils.book_new();
@@ -609,9 +653,10 @@
           source: (row.source || row.Origem || '').toString().trim() || null,
           interest: (row.interest || row.Interesse || '').toString().trim() || null,
           notes: (row.notes || row.Observacoes || '').toString().trim() || null,
-        })).filter(p => p.name);
+          nome_bdr: (row.nome_bdr || row['Nome do BDR'] || '').toString().trim() || null,
+        })).filter(p => p.name && p.phone && p.nome_bdr);
 
-        if (!payloads.length) { showToast('Nenhuma linha válida encontrada', 'err'); return; }
+        if (!payloads.length) { showToast('Nenhuma linha válida encontrada (verifique os campos obrigatórios)', 'err'); return; }
 
         const { error } = await supabase.from('leads').insert(payloads);
         if (error) throw error;
@@ -709,8 +754,12 @@
 
 
     // ==== INIT ===============================================================
+    let updateInterestCounter, updateEditInterestCounter;
+
     (async function start() {
       applyTheme();
+      updateInterestCounter = setupCharCounter('#interest', '#interestCounter', 50);
+      updateEditInterestCounter = setupCharCounter('#editInterest', '#editInterestCounter', 50);
       await fetchLeads();
     })();
   </script>
