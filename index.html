@@ -1,2193 +1,719 @@
 <!DOCTYPE html>
-<html lang="pt-br">
+<html lang="pt-BR">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BI Grupo Rugido</title>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap');
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Ferramenta de Captura de Leads</title>
 
-        :root {
-            --header-bg: #1A2C50;
-            --main-bg: #F4F7FC;
-            --card-bg: #FFFFFF;
-            --text-dark: #2D3748;
-            --text-light: #718096;
-            --highlight-pink: #E53E75;
-            --border-color: #E2E8F0;
-            --success-color: #48BB78;
-            --error-color: #F56565;
-            --form-bg: #FAFBFF;
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    // Tailwind config (opcional: tema escuro por classe)
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#eef2ff', 100: '#e0e7ff', 200: '#c7d2fe', 300: '#a5b4fc',
+              400: '#818cf8', 500: '#6366f1', 600: '#4f46e5', 700: '#4338ca',
+              800: '#3730a3', 900: '#312e81'
+            }
+          },
+          boxShadow: {
+            soft: '0 8px 30px rgba(0,0,0,0.06)'
+          }
         }
+      }
+    }
+  </script>
 
-        body.dark-mode {
-            --header-bg: #1A202C;
-            --main-bg: #171923;
-            --card-bg: #2D3748;
-            --text-dark: #F7FAFC;
-            --text-light: #A0AEC0;
-            --border-color: #4A5568;
-            --form-bg: #1A202C;
-        }
+  <!-- Supabase JS v2 -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
+  <!-- SheetJS para import/export XLSX -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
-        body {
-            background-color: var(--main-bg);
-            color: var(--text-dark);
-            font-family: 'Roboto', sans-serif;
-            margin: 0;
-            transition: background-color 0.3s, color 0.3s;
-        }
-        
-        /* --- Secção de Login/Registo --- */
-        .auth-section {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            height: 100vh;
-        }
-        .auth-container {
-            background-color: var(--card-bg);
-            padding: 40px;
-            border-radius: 8px;
-            box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05);
-            width: 100%;
-            max-width: 400px;
-            text-align: center;
-        }
-        .auth-container h1 {
-            color: var(--header-bg);
-            margin-bottom: 10px;
-            font-size: 2rem;
-        }
-        .auth-container h1 span {
-            color: var(--highlight-pink);
-        }
-        .auth-container p {
-            color: var(--text-light);
-            margin-bottom: 30px;
-        }
-        .auth-container .form-group {
-            margin-bottom: 20px;
-            text-align: left;
-        }
-        .auth-container .form-group label {
-            display: block;
-            margin-bottom: 8px;
-            font-weight: 500;
-            color: var(--text-light);
-        }
-        .auth-container .form-group input {
-            width: 100%;
-            padding: 12px;
-            border: 1px solid var(--border-color);
-            border-radius: 6px;
-            font-size: 1rem;
-            background-color: var(--main-bg);
-            color: var(--text-dark);
-        }
-        .auth-container button {
-            width: 100%;
-            padding: 14px;
-            border: none;
-            border-radius: 6px;
-            background-color: var(--highlight-pink);
-            color: white;
-            font-size: 1rem;
-            font-weight: 700;
-            cursor: pointer;
-            transition: background-color 0.2s;
-        }
-        .auth-container button:hover {
-            background-color: #c53064;
-        }
-        .auth-toggle-link {
-            margin-top: 20px;
-            color: var(--text-light);
-            cursor: pointer;
-            text-decoration: underline;
-        }
-        .error-message {
-            color: var(--error-color, #F56565);
-            margin-top: 15px;
-            display: none;
-        }
+  <!-- dayjs para datas -->
+  <script src="https://cdn.jsdelivr.net/npm/dayjs@1/dayjs.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/dayjs@1/plugin/utc.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/dayjs@1/plugin/timezone.js"></script>
 
-        /* --- Secção da Aplicação --- */
-        .app-container {
-            display: flex;
-            flex-direction: column;
-            height: 100vh;
-        }
-        header {
-            background: var(--header-bg);
-            color: white;
-            padding: 0 30px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            height: 64px;
-            flex-shrink: 0;
-            border-bottom: 1px solid var(--border-color);
-        }
-        header .logo { font-size: 1.5rem; font-weight: 700; }
-        header .logo span { color: var(--highlight-pink); }
-        header nav { display: flex; gap: 10px; flex-wrap: wrap;}
-        header .nav-link {
-            color: #E2E8F0;
-            text-decoration: none;
-            padding: 8px 16px;
-            border-radius: 6px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            font-weight: 500;
-            transition: background-color 0.2s ease;
-        }
-        header .nav-link:hover { background-color: rgba(255,255,255,0.1); }
-        header .nav-link.active { background-color: var(--highlight-pink); color: white; }
-        header .header-actions { display: flex; align-items: center; gap: 20px; }
-        header .user-display-name { font-weight: 500; }
-        
-        #theme-toggle-btn {
-            background: none;
-            border: none;
-            cursor: pointer;
-            color: #E2E8F0;
-            padding: 4px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        #theme-toggle-btn:hover {
-            background-color: rgba(255, 255, 255, 0.1);
-        }
-        #theme-toggle-btn .sun-icon { display: none; }
-        body.dark-mode #theme-toggle-btn .moon-icon { display: none; }
-        body.dark-mode #theme-toggle-btn .sun-icon { display: block; }
-
-        header .action-button {
-            background: transparent;
-            border: 1px solid var(--text-light);
-            color: #E2E8F0;
-            padding: 8px 16px;
-            border-radius: 6px;
-            cursor: pointer;
-            font-weight: 500;
-            transition: all 0.2s ease;
-        }
-        header .action-button:hover { background-color: rgba(255,255,255,0.1); border-color: white; }
-        .profile-icon {
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            border: 2px solid #E2E8F0;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            transition: all 0.2s ease;
-        }
-        .profile-icon:hover { border-color: var(--highlight-pink); }
-        .profile-icon svg { color: #E2E8F0; }
-        main {
-            flex-grow: 1;
-            padding: 30px;
-            overflow-y: auto;
-        }
-        .content-section { display: none; }
-        .content-section.active { display: block; animation: fadeIn 0.4s ease; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        .page-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-end;
-            margin-bottom: 24px;
-            flex-wrap: wrap;
-            gap: 20px;
-        }
-        .page-header h2 { font-size: 2rem; color: var(--text-dark); margin: 0; }
-        .page-header p { font-size: 1rem; color: var(--text-light); }
-        .dashboard-filters { display: flex; gap: 15px; align-items: flex-end; flex-wrap: wrap; }
-        .filter-group { display: flex; flex-direction: column; }
-        .filter-group label { font-size: 0.8rem; color: var(--text-light); margin-bottom: 4px; }
-        .filter-group select, .filter-group input {
-            padding: 8px 12px;
-            border-radius: 6px;
-            border: 1px solid var(--border-color);
-            background: var(--card-bg);
-            color: var(--text-dark);
-            font-family: 'Roboto', sans-serif;
-            font-size: 0.9rem;
-        }
-        #custom-date-filters, #history-custom-date-filters, #recebiveis-custom-date-filters, #recebiveis-payment-custom-date-filters { display: none; gap: 15px; }
-        #custom-date-filters.visible, #history-custom-date-filters.visible, #recebiveis-custom-date-filters.visible, #recebiveis-payment-custom-date-filters.visible { display: flex; }
-        
-        .checkbox-group {
-            display: flex;
-            gap: 15px;
-            align-items: center;
-            background: var(--card-bg);
-            padding: 8px 12px;
-            border-radius: 6px;
-            border: 1px solid var(--border-color);
-        }
-        .checkbox-group label {
-            display: flex;
-            align-items: center;
-            gap: 5px;
-            margin-bottom: 0;
-            font-size: 0.9rem;
-            color: var(--text-dark);
-            cursor: pointer;
-        }
-        .checkbox-group input[type="checkbox"] {
-            cursor: pointer;
-        }
-
-        /* --- Dashboard --- */
-        .dashboard-grid {
-            display: grid;
-            grid-template-columns: 1fr;
-            gap: 24px;
-        }
-        
-        .kpi-grid {
-            display: grid;
-            gap: 24px;
-            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-        }
-
-        .kpi-card-small { 
-            background: var(--card-bg); 
-            padding: 20px; 
-            border-radius: 8px; 
-            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -1px rgba(0,0,0,0.03); 
-        }
-        .kpi-card-small .title { 
-            color: var(--text-light); 
-            margin-bottom: 4px; 
-            font-size: 0.9rem; 
-            font-weight: 500; 
-        }
-        .kpi-card-small .value { 
-            font-size: 2rem; 
-            font-weight: 700; 
-            color: var(--text-dark);
-        }
-
-        .kpi-large-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
-            justify-content: center;
-            gap: 24px;
-        }
-
-        .kpi-card-large { 
-            background: var(--card-bg); 
-            padding: 24px; 
-            border-radius: 8px; 
-            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06); 
-            text-align: center; 
-        }
-        .kpi-card-large .title { 
-            color: var(--text-dark); 
-            margin-bottom: 12px; 
-            padding-bottom: 12px; 
-            font-size: 1.2rem; 
-            font-weight: 700; 
-            border-bottom: 1px solid var(--border-color); 
-        }
-        .kpi-card-large .value { 
-            font-size: 2.5rem; 
-            font-weight: 700; 
-        }
-        
-        /* Custom colors for Recebiveis KPIs */
-        #recebiveis-total-vendido {
-            color: var(--text-dark);
-        }
-        #recebiveis-valor-recebido {
-            color: var(--success-color);
-        }
-        #recebiveis-saldo-pendente {
-            color: var(--error-color);
-        }
-        #kpi-valor-vendas-total {
-             color: var(--highlight-pink);
-        }
-
-        .widget { 
-            background: var(--card-bg); 
-            padding: 24px; 
-            border-radius: 8px; 
-            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06); 
-        }
-        .widget h3 { 
-            margin: 0 0 20px 0; 
-            font-size: 1.2rem; 
-            font-weight: 700; 
-            color: var(--text-dark); 
-            padding-bottom: 12px; 
-            border-bottom: 1px solid var(--border-color); 
-        }
-
-        .ranking-item { display: flex; align-items: center; gap: 15px; margin-bottom: 15px; }
-        .ranking-item .rank { font-size: 1rem; font-weight: 700; color: var(--text-light); width: 20px; }
-        .ranking-item .avatar { width: 40px; height: 40px; border-radius: 50%; background: var(--main-bg); display: flex; align-items: center; justify-content: center; font-weight: 700; }
-        .ranking-item .info .name { font-weight: 500; }
-        .ranking-item .info .details { color: var(--text-light); font-size: 0.9rem; }
-        .ranking-item .value { margin-left: auto; font-weight: 700; font-size: 1.1rem; }
-        
-        .pipeline-widget-grid, .ranking-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
-            gap: 24px;
-        }
-        .pipeline-item { display: grid; grid-template-columns: 100px 1fr 40px; gap: 15px; align-items: center; margin-bottom: 16px; }
-        .pipeline-label { color: var(--text-light); font-weight: 500; text-align: right; }
-        .pipeline-bar-bg { width: 100%; height: 12px; background-color: var(--main-bg); border-radius: 6px; overflow: hidden; }
-        .pipeline-bar-fg { height: 100%; background-color: var(--highlight-pink); border-radius: 6px; transition: width 0.5s ease-out; }
-        .pipeline-value { font-weight: 700; text-align: left; }
-        
-        .channel-metrics-container { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; }
-        .channel-metric-item { text-align: center; padding: 15px; background: var(--form-bg); border-radius: 8px; }
-        .channel-metric-item .channel-name { font-weight: 700; font-size: 1.2rem; margin-bottom: 15px; }
-        .channel-metric-item .metric { display: flex; justify-content: space-between; font-size: 1rem; padding: 8px 0; border-bottom: 1px solid var(--border-color); }
-        .channel-metric-item .metric:last-child { border-bottom: none; }
-        .channel-metric-item .metric-label { color: var(--text-light); }
-        .channel-metric-item .metric-value { font-weight: 700; }
-
-        form { max-width: 900px; margin: 0 auto; }
-        .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
-        .form-group { display: flex; flex-direction: column; }
-        .form-group.full-width { grid-column: 1 / -1; }
-        label { margin-bottom: 8px; font-weight: 500; color: var(--text-light); }
-        input, select, textarea { background: var(--card-bg); border: 1px solid var(--border-color); color: var(--text-dark); padding: 12px; border-radius: 6px; font-size: 1rem; font-family: 'Roboto', sans-serif; }
-        input:focus, select:focus, textarea:focus { outline: none; border-color: var(--highlight-pink); box-shadow: 0 0 0 2px rgba(229, 62, 117, 0.2); }
-        textarea { resize: vertical; min-height: 80px; }
-        .form-section-divider { border-top: 1px solid var(--border-color); margin: 30px 0; }
-        .lancamento-block { background: var(--form-bg); border: 1px dashed var(--border-color); padding: 20px; border-radius: 8px; margin-bottom: 20px; position: relative; }
-        .remove-lancamento-btn { position: absolute; top: 10px; right: 10px; background: #E2E8F0; color: var(--text-light); border: none; width: 24px; height: 24px; border-radius: 50%; cursor: pointer; font-weight: bold; }
-        .add-lancamento-btn { background: transparent; border: 1px dashed var(--text-light); color: var(--text-light); padding: 10px; width: 100%; border-radius: 6px; cursor: pointer; margin-bottom: 20px; }
-        button[type="submit"] { background: var(--highlight-pink); color: white; border: none; padding: 14px; border-radius: 6px; cursor: pointer; font-size: 1rem; font-weight: 700; width: 100%; }
-        table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 0.9rem; }
-        th, td { padding: 12px 15px; text-align: left; border-bottom: 1px solid var(--border-color); }
-        th { background-color: var(--main-bg); font-weight: 500; color: var(--text-light); text-transform: uppercase; font-size: 0.8rem; }
-        td { color: var(--text-dark); }
-        tbody tr { transition: background-color 0.2s ease; }
-        tbody tr:not(.no-hover):hover { background-color: var(--form-bg); }
-        .recebiveis-row { cursor: pointer; }
-        .table-filters input, .table-filters select { width: 100%; padding: 8px; border: 1px solid var(--border-color); border-radius: 4px; font-size: 0.9rem; }
-        .notes-cell { max-width: 250px; white-space: normal; word-break: break-word; }
-        .notes-text-full { display: none; }
-        .toggle-notes-btn {
-            color: var(--highlight-pink);
-            cursor: pointer;
-            font-weight: 500;
-            text-decoration: underline;
-            background: none;
-            border: none;
-            padding: 0;
-            font-size: 0.8rem;
-            display: block;
-            margin-top: 4px;
-        }
-        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center; z-index: 1000; opacity: 0; visibility: hidden; transition: opacity 0.3s ease, visibility 0.3s ease; }
-        .modal-overlay.visible { opacity: 1; visibility: visible; }
-        .modal-content { background: var(--main-bg); padding: 30px; border-radius: 8px; width: 90%; max-width: 900px; max-height: 90vh; overflow-y: auto; position: relative; transform: scale(0.95); transition: transform 0.3s ease; }
-        .modal-overlay.visible .modal-content { transform: scale(1); }
-        .modal-close-btn { position: absolute; top: 15px; right: 15px; background: none; border: none; font-size: 2rem; color: var(--text-light); cursor: pointer; }
-        #notification-modal { z-index: 2000; }
-        #notification-modal .modal-content { max-width: 400px; text-align: center; }
-        #notification-message { font-size: 1.1rem; margin-bottom: 20px; }
-        #notification-close-btn { background: var(--header-bg); color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-size: 1rem; }
-        #notification-modal .modal-content.success { border-left: 5px solid var(--success-color); }
-        #notification-modal .modal-content.error { border-left: 5px solid var(--error-color); }
-        .proposal-card { background: var(--card-bg); border-radius: 8px; padding: 20px; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 4px rgba(0,0,0,0.05); flex-wrap: wrap; gap: 10px; }
-        .proposal-info { flex-grow: 1; }
-        .proposal-info .lead-name { font-weight: 700; font-size: 1.1rem; color: var(--text-dark); }
-        .proposal-info .lead-name.editable { cursor: pointer; color: var(--highlight-pink); text-decoration: underline; }
-        .proposal-info .details { font-size: 0.9rem; color: var(--text-light); }
-        .proposal-actions { display: flex; gap: 10px; margin-top: 10px; flex-wrap: wrap; }
-        .proposal-actions button, .recebiveis-save-btn { border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer; font-weight: 500; transition: opacity 0.2s ease; }
-        .proposal-actions button:hover, .recebiveis-save-btn:hover { opacity: 0.8; }
-        .btn-ganha { background-color: var(--success-color); color: white; }
-        .btn-perdida { background-color: var(--error-color); color: white; }
-        .end-deal-btn { background-color: var(--text-light); color: white; padding: 4px 8px; font-size: 0.8rem; border-radius: 4px; }
-        .status-pago { color: var(--success-color); font-weight: bold; }
-        .status-pendente { color: var(--error-color); font-weight: bold; }
-        #payments-list-container table { font-size: 0.85rem; }
-        #payments-list-container td, #payments-list-container th { padding: 8px; }
-        .delete-payment-btn { color: var(--error-color); cursor: pointer; font-weight: bold; }
-
-    </style>
+  <style>
+    html, body { height: 100%; }
+    .scroll-thin { scrollbar-width: thin; }
+    .scroll-thin::-webkit-scrollbar { height: 8px; width: 8px; }
+    .scroll-thin::-webkit-scrollbar-thumb { background: rgba(148, 163, 184, .6); border-radius: 999px; }
+  </style>
 </head>
-<body>
-
-    <!-- Seção de Login -->
-    <div id="login-section" class="auth-section">
-        <div class="auth-container">
-            <h1>Grupo <span>Rugido</span></h1>
-            <p>Faça login para aceder ao dashboard.</p>
-            <form id="login-form">
-                <div class="form-group">
-                    <label for="email">E-mail</label>
-                    <input type="email" id="email" required>
-                </div>
-                <div class="form-group">
-                    <label for="password">Palavra-passe</label>
-                    <input type="password" id="password" required>
-                </div>
-                <button type="submit">Entrar</button>
-                <p class="error-message" id="login-error-message"></p>
-                <p class="auth-toggle-link" id="show-signup">Criar uma conta</p>
-            </form>
+<body class="bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 transition-colors">
+  <!-- APP WRAPPER -->
+  <div class="min-h-screen">
+    <!-- NAVBAR -->
+    <header class="sticky top-0 z-40 backdrop-blur supports-[backdrop-filter]:bg-white/60 dark:supports-[backdrop-filter]:bg-slate-900/50 bg-white/80 dark:bg-slate-900/70 border-b border-slate-200/60 dark:border-slate-800">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="h-16 flex items-center justify-between">
+          <div class="flex items-center gap-3">
+            <div class="h-9 w-9 rounded-2xl bg-brand-600 flex items-center justify-center shadow-soft">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="h-5 w-5 text-white"><path fill="currentColor" d="M11 3a1 1 0 0 1 1 1v4h4a1 1 0 1 1 0 2h-4v4a1 1 0 1 1-2 0v-4H6a1 1 0 1 1 0-2h4V4a1 1 0 0 1 1-1Z"/></svg>
+            </div>
+            <div>
+              <h1 class="text-lg font-semibold leading-tight">Ferramenta de Captura de Leads</h1>
+              <p class="text-xs text-slate-500 dark:text-slate-400 -mt-0.5">Index único • Supabase • Importação/Exportação XLSX</p>
+            </div>
+          </div>
+          <div class="flex items-center gap-2">
+            <button id="btnDark" class="inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800" title="Alternar tema claro/escuro">
+              <svg id="iconSun" class="h-4 w-4 hidden" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="currentColor" d="M12 18a6 6 0 1 0 0-12 6 6 0 0 0 0 12Zm0 4a1 1 0 0 1-1-1v-1h2v1a1 1 0 0 1-1 1ZM5 12a1 1 0 0 1-1 1H3v-2h1a1 1 0 0 1 1 1Zm8-9v1h-2V3a1 1 0 0 1 2 0ZM4.22 5.64l.7.7L4.2 7.06l-.7-.7a1 1 0 1 1 1.41-1.42Zm15.56 0a1 1 0 0 1 0 1.42l-.7.7l-1.41-1.41l.7-.7a1 1 0 0 1 1.41 0ZM20 11h1v2h-1a1 1 0 1 1 0-2ZM4.22 18.36A1 1 0 1 1 2.8 16.94l.7-.7l1.41 1.41l-.7.7ZM19.78 18.36l-.7-.7l-1.41 1.41l.7.7a1 1 0 0 1-1.41 1.41l-.7-.7l1.41-1.41l.7.7a1 1 0 0 1 1.41-1.41Z"/></svg>
+              <svg id="iconMoon" class="h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="currentColor" d="M21 12.79A9 9 0 1 1 11.21 3a7 7 0 1 0 9.79 9.79Z"/></svg>
+              <span class="sr-only">Tema</span>
+            </button>
+          </div>
         </div>
-    </div>
+      </div>
+    </header>
 
-    <!-- Seção de Cadastro -->
-    <div id="signup-section" class="auth-section" style="display: none;">
-        <div class="auth-container">
-            <h1>Criar Conta</h1>
-            <p>Preencha os seus dados para se registar.</p>
-            <form id="signup-form">
-                <div class="form-group">
-                    <label for="signup-name">Nome Completo</label>
-                    <input type="text" id="signup-name" required>
-                </div>
-                <div class="form-group">
-                    <label for="signup-email">E-mail</label>
-                    <input type="email" id="signup-email" required>
-                </div>
-                <div class="form-group">
-                    <label for="signup-password">Palavra-passe</label>
-                    <input type="password" id="signup-password" required>
-                </div>
-                <button type="submit">Registar</button>
-                 <p class="error-message" id="signup-error-message"></p>
-                <p class="auth-toggle-link" id="show-login">Já tenho uma conta</p>
-            </form>
-        </div>
-    </div>
+    <!-- MAIN -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <!-- GRID: Form + Lista -->
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- FORM CARD -->
+        <section class="lg:col-span-1">
+          <div class="bg-white dark:bg-slate-900 rounded-2xl shadow-soft border border-slate-200 dark:border-slate-800 p-5">
+            <div class="flex items-start justify-between mb-4">
+              <div>
+                <h2 class="text-base font-semibold">Novo Lead</h2>
+                <p class="text-xs text-slate-500 dark:text-slate-400">Preencha os dados abaixo e salve.</p>
+              </div>
+              <span class="inline-flex items-center gap-1 text-[11px] px-2 py-1 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200/70 dark:border-slate-700">ID auto</span>
+            </div>
 
-    <!-- Seção Principal da Aplicação -->
-    <div id="app-section" class="app-container" style="display: none;">
-        <header>
-            <div class="logo">Grupo <span>Rugido</span></div>
-            <nav>
-                <a href="#" class="nav-link active" data-target="dashboard">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="20" x2="12" y2="10"></line><line x1="18" y1="20" x2="18" y2="4"></line><line x1="6" y1="20" x2="6" y2="16"></line></svg>
-                    Dashboard
-                </a>
-                <a href="#" class="nav-link" data-target="diario">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
-                    Diário
-                </a>
-                <a href="#" class="nav-link" data-target="propostas">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
-                    Propostas
-                </a>
-                <a href="#" class="nav-link" data-target="historico">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
-                    Histórico
-                </a>
-                <a href="#" class="nav-link" data-target="recebiveis">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
-                    Recebíveis
-                </a>
-            </nav>
-            <div class="header-actions">
-                <button id="theme-toggle-btn">
-                      <svg class="moon-icon" xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
-                      <svg class="sun-icon" xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>
+            <form id="leadForm" class="space-y-4">
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label class="block text-xs font-medium mb-1" for="name">Nome*</label>
+                  <input id="name" required type="text" class="w-full rounded-xl border-gray-400 dark:border-slate-700 bg-white dark:bg-slate-950 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500" placeholder="Ex.: Maria Silva" />
+                </div>
+                <div>
+                  <label class="block text-xs font-medium mb-1" for="email">E-mail</label>
+                  <input id="email" type="email" class="w-full rounded-xl border-gray-400 dark:border-slate-700 bg-white dark:bg-slate-950 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500" placeholder="maria@email.com" />
+                </div>
+                <div>
+                  <label class="block text-xs font-medium mb-1" for="phone">Telefone/Whats</label>
+                  <input id="phone" type="tel" class="w-full rounded-xl border-gray-400 dark:border-slate-700 bg-white dark:bg-slate-950 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500" placeholder="(00) 90000-0000" />
+                </div>
+                <div>
+                  <label class="block text-xs font-medium mb-1" for="source">Origem</label>
+                  <select id="source" class="w-full rounded-xl border-gray-400 dark:border-slate-700 bg-white dark:bg-slate-950 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500">
+                    <option value="">Selecione…</option>
+                    <option>Outbound</option>
+                    <option>Inbound</option>
+                    <option>Indicação</option>
+                    <option>Vanguarda</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="grid grid-cols-1 sm:grid-cols-1 gap-3">
+                <div>
+                  <label class="block text-xs font-medium mb-1" for="interest">Interesse</label>
+                  <input id="interest" type="text" class="w-full rounded-xl border-gray-400 dark:border-slate-700 bg-white dark:bg-slate-950 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500" placeholder="Produto/Serviço" />
+                </div>
+              </div>
+
+              <div>
+                <label class="block text-xs font-medium mb-1" for="notes">Observações</label>
+                <textarea id="notes" rows="3" class="w-full rounded-xl border-gray-400 dark:border-slate-700 bg-white dark:bg-slate-950 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500" placeholder="Contexto, objeções, prazos…"></textarea>
+              </div>
+
+              <div class="flex items-center gap-2 pt-1">
+                <button id="btnSave" type="submit" class="inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm bg-brand-600 hover:bg-brand-700 text-white shadow-soft">
+                  <svg class="h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="currentColor" d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2ZM6 6v12h12V9h-4a1 1 0 0 1-1-1V4H6Zm2 11h8v-2H8v2Z"/></svg>
+                  Salvar lead
                 </button>
-                <span id="user-display-name" class="user-display-name"></span>
-                <button id="logout-button" class="action-button">Sair</button>
-                <div class="profile-icon">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
-                </div>
-            </div>
-        </header>
-
-        <main>
-            <section id="dashboard" class="content-section active">
-                <div class="page-header">
-                    <div>
-                        <h2>Dashboard</h2>
-                        <p>Visão geral das suas métricas de prospecção.</p>
-                    </div>
-                    <div class="dashboard-filters">
-                        <div class="filter-group">
-                            <label for="user-filter">Closer</label>
-                            <select id="user-filter"></select>
-                        </div>
-                        <div class="filter-group">
-                            <label for="channel-filter-dash">Canal</label>
-                            <select id="channel-filter-dash">
-                                <option value="all">Todos os Canais</option>
-                                <option>Inbound</option>
-                                <option>Outbound</option>
-                                <option>Webinar</option>
-                                <option>Canal Vanguarda</option>
-                            </select>
-                        </div>
-                        <div class="filter-group">
-                            <label for="date-preset-filter">Período</label>
-                            <select id="date-preset-filter">
-                                <option value="last7days">Últimos 7 dias</option>
-                                <option value="today">Hoje</option>
-                                <option value="yesterday">Ontem</option>
-                                <option value="this_month" selected>Este Mês</option>
-                                <option value="last_month">Mês Passado</option>
-                                <option value="all_time">Máximo</option>
-                                <option value="custom">Personalizado</option>
-                            </select>
-                        </div>
-                        <div id="custom-date-filters">
-                            <div class="filter-group">
-                                <label for="start-date-filter">De</label>
-                                <input type="date" id="start-date-filter">
-                            </div>
-                            <div class="filter-group">
-                                <label for="end-date-filter">Até</label>
-                                <input type="date" id="end-date-filter">
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="dashboard-grid">
-                    <div class="kpi-large-grid">
-                        <div class="kpi-card-large">
-                            <div class="title">Valor Total Vendido</div>
-                            <div class="value" id="kpi-valor-vendas-total">R$ 0,00</div>
-                        </div>
-                    </div>
-
-                    <div class="kpi-grid">
-                        <div class="kpi-card-small"><div class="title">Negócios Ganhos</div><div class="value" id="kpi-vendas">0</div></div>
-                        <div class="kpi-card-small"><div class="title">Leads em Atendimento</div><div class="value" id="kpi-leads-atendimento">0</div></div>
-                        <div class="kpi-card-small"><div class="title">Total de Reuniões</div><div class="value" id="kpi-reunioes-totais">0</div></div>
-                        <div class="kpi-card-small"><div class="title">Reuniões Realizadas</div><div class="value" id="kpi-realizadas">0</div></div>
-                        <div class="kpi-card-small"><div class="title">Propostas Enviadas</div><div class="value" id="kpi-propostas">0</div></div>
-                        <div class="kpi-card-small"><div class="title">Valor Proposta em Aberto</div><div class="value" id="kpi-propostas-aberto">R$ 0,00</div></div>
-                        <div class="kpi-card-small"><div class="title">Qualificadas</div><div class="value" id="kpi-qualificadas">0</div></div>
-                        <div class="kpi-card-small"><div class="title">Desqualificadas</div><div class="value" id="kpi-desqualificadas">0</div></div>
-                        <div class="kpi-card-small"><div class="title">Reagendadas</div><div class="value" id="kpi-reagendadas">0</div></div>
-                        <div class="kpi-card-small"><div class="title">No Show</div><div class="value" id="kpi-no-show">0</div></div>
-                        <div class="kpi-card-small"><div class="title">Reuniões Resgatadas</div><div class="value" id="kpi-reunioes-resgatadas">0</div></div>
-                        <div class="kpi-card-small"><div class="title">Perdidas</div><div class="value" id="kpi-perdidas">0</div></div>
-                    </div>
-                    
-                    <div class="widget channel-widget">
-                        <h3>Performance por Canal</h3>
-                        <div class="channel-metrics-container" id="channel-metrics-container"></div>
-                        <!-- ÁREA DO GRÁFICO ADICIONADA -->
-                        <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid var(--border-color);">
-                            <canvas id="channelSalesChart"></canvas>
-                        </div>
-                    </div>
-                    <div class="pipeline-widget-grid">
-                        <div class="widget pipeline-widget">
-                            <h3>Etapas de Reunião</h3>
-                            <div id="stage-pipeline-container"></div>
-                        </div>
-                        <div class="widget pipeline-widget">
-                            <h3>Evolução do Funil</h3>
-                            <div id="evolution-pipeline-container"></div>
-                        </div>
-                    </div>
-                    <div class="ranking-grid">
-                        <div class="widget ranking-widget">
-                            <h3>Ranking de Vendas</h3>
-                            <div id="ranking-container"></div>
-                        </div>
-                    </div>
-                </div>
-            </section>
-
-            <section id="diario" class="content-section">
-                <div class="page-header" style="text-align: center; display: block;">
-                    <h2>Lançamento Diário</h2>
-                    <p>Registre uma ou mais atividades de uma só vez.</p>
-                </div>
-                <form id="activity-form">
-                    <div class="form-grid">
-                        <div class="form-group">
-                            <label for="date-preset-form">Período</label>
-                            <select id="date-preset-form">
-                                <option value="today">Hoje</option>
-                                <option value="yesterday">Ontem</option>
-                                <option value="custom">Personalizado</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label for="closer-name-form">Closer</label>
-                            <select id="closer-name-form"></select>
-                        </div>
-                        <div class="form-group full-width" id="custom-date-form-group" style="display: none;">
-                            <label for="date-form">Data do Evento</label>
-                            <input type="date" id="date-form">
-                        </div>
-                    </div>
-
-                    <div class="form-section-divider"></div>
-
-                    <div id="lancamentos-container"></div>
-                    
-                    <button type="button" class="add-lancamento-btn" id="add-lancamento-btn">+ Adicionar Lançamento</button>
-                    
-                    <div class="form-group full-width">
-                        <button type="submit">Salvar Todos os Lançamentos</button>
-                    </div>
-                </form>
-            </section>
-
-            <section id="propostas" class="content-section">
-                <div class="page-header">
-                    <div>
-                        <h2>Propostas em Aberto</h2>
-                        <p>Converta propostas em vendas ou perdas.</p>
-                    </div>
-                    <div class="dashboard-filters">
-                         <div class="filter-group">
-                            <label for="propostas-closer-filter">Closer</label>
-                            <select id="propostas-closer-filter"></select>
-                        </div>
-                    </div>
-                </div>
-                <div id="propostas-container">
-                    </div>
-            </section>
-
-            <section id="historico" class="content-section">
-                <div class="page-header">
-                    <div>
-                        <h2>Histórico de Atividades</h2>
-                        <p>Visualize e edite todos os registros do sistema.</p>
-                    </div>
-                </div>
-                <div class="dashboard-filters" style="margin-bottom: 24px;">
-                    <div class="filter-group">
-                        <label for="history-date-preset-filter">Período</label>
-                        <select id="history-date-preset-filter">
-                            <option value="all_time">Máximo</option>
-                            <option value="last7days">Últimos 7 dias</option>
-                            <option value="today">Hoje</option>
-                            <option value="yesterday">Ontem</option>
-                            <option value="this_month">Este Mês</option>
-                            <option value="last_month">Mês Passado</option>
-                            <option value="custom">Personalizado</option>
-                        </select>
-                    </div>
-                    <div id="history-custom-date-filters">
-                        <div class="filter-group">
-                            <label for="history-start-date-filter">De</label>
-                            <input type="date" id="history-start-date-filter">
-                        </div>
-                        <div class="filter-group">
-                            <label for="history-end-date-filter">Até</label>
-                            <input type="date" id="history-end-date-filter">
-                        </div>
-                    </div>
-                     <div class="filter-group">
-                        <label>Tipo de Reunião</label>
-                        <div class="checkbox-group" id="history-type-filter">
-                            <label><input type="checkbox" value="R1" checked> R1</label>
-                            <label><input type="checkbox" value="R2" checked> R2</label>
-                            <label><input type="checkbox" value="R3" checked> R3</label>
-                            <label><input type="checkbox" value="R4" checked> R4</label>
-                            <label><input type="checkbox" value="R5" checked> R5</label>
-                        </div>
-                    </div>
-                    <button id="clear-history-filters-btn" class="action-button" style="align-self: flex-end;">Limpar Filtros</button>
-                </div>
-                <div id="history-table-container"></div>
-            </section>
-
-            <section id="recebiveis" class="content-section">
-                <div class="page-header">
-                    <div>
-                        <h2>Controle de Recebíveis</h2>
-                        <p>Gerencie os pagamentos das vendas realizadas.</p>
-                    </div>
-                    <div class="dashboard-filters">
-                        <div class="filter-group">
-                            <label for="recebiveis-closer-filter">Closer</label>
-                            <select id="recebiveis-closer-filter"></select>
-                        </div>
-                        <div class="filter-group">
-                            <label for="recebiveis-date-preset-filter">Período da Venda</label>
-                            <select id="recebiveis-date-preset-filter">
-                                <option value="all_time">Máximo</option>
-                                <option value="this_month">Este Mês</option>
-                                <option value="last_month">Mês Passado</option>
-                                <option value="last7days">Últimos 7 dias</option>
-                                <option value="custom">Personalizado</option>
-                            </select>
-                        </div>
-                        <div id="recebiveis-custom-date-filters">
-                            <div class="filter-group">
-                                <label for="recebiveis-start-date-filter">De</label>
-                                <input type="date" id="recebiveis-start-date-filter">
-                            </div>
-                            <div class="filter-group">
-                                <label for="recebiveis-end-date-filter">Até</label>
-                                <input type="date" id="recebiveis-end-date-filter">
-                            </div>
-                        </div>
-                        <div class="filter-group">
-                            <label for="recebiveis-payment-date-preset-filter">Período do Recebimento</label>
-                            <select id="recebiveis-payment-date-preset-filter">
-                                <option value="all_time">Máximo</option>
-                                <option value="this_month">Este Mês</option>
-                                <option value="last_month">Mês Passado</option>
-                                <option value="last7days">Últimos 7 dias</option>
-                                <option value="custom">Personalizado</option>
-                            </select>
-                        </div>
-                        <div id="recebiveis-payment-custom-date-filters">
-                            <div class="filter-group">
-                                <label for="recebiveis-payment-start-date-filter">De</label>
-                                <input type="date" id="recebiveis-payment-start-date-filter">
-                            </div>
-                            <div class="filter-group">
-                                <label for="recebiveis-payment-end-date-filter">Até</label>
-                                <input type="date" id="recebiveis-payment-end-date-filter">
-                            </div>
-                        </div>
-                        <div class="filter-group">
-                            <label for="recebiveis-status-filter">Status</label>
-                            <select id="recebiveis-status-filter">
-                                <option value="all">Todos</option>
-                                <option value="paid">Pago</option>
-                                <option value="not_paid" selected>Não Pago</option>
-                            </select>
-                        </div>
-                    </div>
-                </div>
-                <div class="kpi-large-grid" style="margin-bottom: 24px;">
-                    <div class="kpi-card-large">
-                        <div class="title">Total Vendido</div>
-                        <div class="value" id="recebiveis-total-vendido">R$ 0,00</div>
-                    </div>
-                    <div class="kpi-card-large">
-                        <div class="title">Valor Recebido</div>
-                        <div class="value" id="recebiveis-valor-recebido">R$ 0,00</div>
-                    </div>
-                    <div class="kpi-card-large">
-                        <div class="title">Saldo Pendente</div>
-                        <div class="value" id="recebiveis-saldo-pendente">R$ 0,00</div>
-                    </div>
-                </div>
-                <div id="recebiveis-table-container"></div>
-            </section>
-        </main>
-    </div>
-
-    <!-- Modal de Edição -->
-    <div id="edit-modal" class="modal-overlay">
-        <div class="modal-content">
-            <button id="modal-close-btn" class="modal-close-btn">&times;</button>
-            <h3>Editar Atividade</h3>
-            <form id="edit-activity-form">
-                <input type="hidden" id="edit-activity-id">
-                <div class="form-grid">
-                    <div class="form-group"><label for="edit-date">Data da Atividade</label><input type="date" id="edit-date" required></div>
-                    <div class="form-group"><label for="edit-lead-name">Lead/Empresa</label><input type="text" id="edit-lead-name" required></div>
-                    <div class="form-group"><label for="edit-bdr">BDR</label><input type="text" id="edit-bdr"></div>
-                    <div class="form-group"><label for="edit-revenue">Faturamento da Empresa</label>
-                        <select id="edit-revenue">
-                            <option>Desconhecido</option>
-                            <option>-50k</option>
-                            <option>50k a 150k</option>
-                            <option>150k a 750k</option>
-                            <option>acima de 750k</option>
-                        </select>
-                    </div>
-                    <div class="form-group"><label for="edit-channel">Canal</label><select id="edit-channel"><option>Inbound</option><option>Outbound</option><option>Webinar</option><option>Canal Vanguarda</option></select></div>
-                    <div class="form-group"><label for="edit-qualification">Qualificação</label>
-                        <select id="edit-qualification">
-                            <option>Não Identificado</option>
-                            <option>Qualificado</option>
-                            <option>Não Qualificado</option>
-                        </select>
-                    </div>
-                    <div class="form-group"><label for="edit-activity-type">Tipo de Reunião</label>
-                        <select id="edit-activity-type" required>
-                            <option value="">Selecione o Tipo</option>
-                            <option>R1</option>
-                            <option>R2</option>
-                            <option>R3</option>
-                            <option>R4</option>
-                            <option>R5</option>
-                        </select>
-                    </div>
-                    <div class="form-group"><label for="edit-activity-status">Status da Atividade</label><select id="edit-activity-status"><option>Reunião Realizada</option><option>Reunião Reagendada</option><option>No Show</option></select></div>
-                    <div class="form-group"><label for="edit-proposal-sent">Proposta Enviada?</label><select id="edit-proposal-sent"><option>Não</option><option>Sim</option></select></div>
-                    <div class="form-group"><label for="edit-reuniao-resgatada">Reunião Resgatada?</label><select id="edit-reuniao-resgatada"><option>Não</option><option>Sim</option></select></div>
-                    <div class="form-group"><label for="edit-funnel-evolution">Evolução no Funil</label>
-                        <select id="edit-funnel-evolution">
-                            <option value="">Nenhuma</option>
-                            <option>De R1 para R2</option>
-                            <option>De R2 para R3</option>
-                            <option>De R3 para R4</option>
-                            <option>De R4 para R5</option>
-                        </select>
-                    </div>
-                    <div class="form-group"><label for="edit-proposal-value">Valor da Proposta (R$)</label><input type="number" id="edit-proposal-value" placeholder="7000"></div>
-                    <div class="form-group full-width"><label for="edit-notes">Observações</label><textarea id="edit-notes" placeholder="Adicione notas sobre a negociação..."></textarea></div>
-                </div>
-                <div class="form-group full-width" style="margin-top: 20px;">
-                    <button type="submit">Salvar Alterações</button>
-                </div>
+                <button id="btnClear" type="button" class="inline-flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800">
+                  Limpar
+                </button>
+              </div>
             </form>
-        </div>
-    </div>
+          </div>
 
-    <!-- Modal de Notificação -->
-    <div id="notification-modal" class="modal-overlay">
-        <div class="modal-content">
-            <p id="notification-message"></p>
-            <button id="notification-close-btn">Fechar</button>
-        </div>
-    </div>
-
-    <!-- Modal de Gestão de Pagamentos -->
-    <div id="payment-modal" class="modal-overlay">
-        <div class="modal-content">
-            <button id="payment-modal-close-btn" class="modal-close-btn">&times;</button>
-            <h3 id="payment-modal-title">Gerenciar Pagamentos para: Lead</h3>
-            <div id="payment-modal-kpis" class="kpi-grid" style="margin-bottom: 24px;">
-                <!-- KPIs serão inseridos aqui pelo JS -->
+          <!-- IMPORT / EXPORT CARD -->
+          <div class="mt-6 bg-white dark:bg-slate-900 rounded-2xl shadow-soft border border-slate-200 dark:border-slate-800 p-5">
+            <div class="flex items-center justify-between mb-4">
+              <h3 class="text-base font-semibold">Importar / Exportar</h3>
             </div>
-            
-            <h4>Pagamentos Registrados</h4>
-            <div id="payments-list-container" style="margin-bottom: 24px;">
-                <!-- Lista de pagamentos será inserida aqui -->
+            <div class="flex flex-col sm:flex-row gap-3">
+              <button id="btnExport" class="inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm bg-slate-900 text-white dark:bg-white dark:text-slate-900">
+                <svg class="h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="currentColor" d="M12 3a1 1 0 0 1 1 1v9.59l2.3-2.3a1 1 0 0 1 1.4 1.42l-4 4a1 1 0 0 1-1.4 0l-4-4a1 1 0 0 1 1.4-1.42l2.3 2.3V4a1 1 0 0 1 1-1ZM5 20a1 1 0 0 1 0-2h14a1 1 0 1 1 0 2H5Z"/></svg>
+                Exportar XLSX
+              </button>
+              <label class="inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm border border-slate-200 dark:border-slate-700 cursor-pointer">
+                <input id="fileImport" type="file" accept=".xlsx,.csv" class="hidden" />
+                <svg class="h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="currentColor" d="M12 3a1 1 0 0 0-1 1v9.59l-2.3-2.3a1 1 0 1 0-1.4 1.42l4 4a1 1 0 0 0 1.4 0l4-4a1 1 0 0 0-1.4-1.42l-2.3 2.3V4a1 1 0 0 0-1-1ZM5 20a1 1 0 1 0 0-2h14a1 1 0 1 0 0 2H5Z"/></svg>
+                Importar XLSX/CSV
+              </label>
             </div>
+            <p class="mt-2 text-xs text-slate-500 dark:text-slate-400">Colunas suportadas: <code>name, email, phone, source, interest, notes</code>.</p>
+          </div>
+        </section>
 
-            <div class="form-section-divider"></div>
-
-            <h4>Adicionar Novo Pagamento</h4>
-            <form id="add-payment-form">
-                <input type="hidden" id="payment-activity-id">
-                <div class="form-grid">
-                    <div class="form-group">
-                        <label for="payment-amount">Valor Recebido (R$)</label>
-                        <input type="number" id="payment-amount" step="0.01" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="payment-date">Data do Recebimento</label>
-                        <input type="date" id="payment-date" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="payment-method">Meio de Pagamento</label>
-                        <select id="payment-method">
-                            <option>Pix</option>
-                            <option>Boleto</option>
-                            <option>Cartão de Crédito</option>
-                            <option>Outro</option>
-                        </select>
-                    </div>
-                    <div class="form-group" style="align-self: flex-end;">
-                         <button type="submit">Adicionar Pagamento</button>
-                    </div>
+        <!-- LISTA CARD -->
+        <section class="lg:col-span-2">
+          <div class="bg-white dark:bg-slate-900 rounded-2xl shadow-soft border border-slate-200 dark:border-slate-800 p-5">
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+              <div>
+                <h2 class="text-base font-semibold">Leads</h2>
+                <p class="text-xs text-slate-500 dark:text-slate-400">Pesquisar, filtrar e gerenciar.</p>
+              </div>
+              <div class="flex flex-wrap items-center gap-2">
+                <div class="relative">
+                  <svg class="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="currentColor" d="M15.5 14h-.79l-.28-.27A6.5 6.5 0 1 0 14 15.5l.27.28v.79l4.25 4.25a1 1 0 0 0 1.41-1.41L15.5 14Zm-6 0A4.5 4.5 0 1 1 14 9.5 4.5 4.5 0 0 1 9.5 14Z"/></svg>
+                  <input id="search" placeholder="Buscar por nome, e-mail, interesse…" class="pl-9 pr-3 py-2 rounded-xl text-sm border border-gray-400 dark:border-slate-700 bg-white dark:bg-slate-950 w-64" />
                 </div>
-            </form>
-        </div>
-    </div>
-
-    <!-- MODAL DE CONFIRMAÇÃO ADICIONADO -->
-    <div id="confirm-modal" class="modal-overlay">
-        <div class="modal-content" style="max-width: 400px; text-align: center;">
-            <p id="confirm-message">Você tem certeza?</p>
-            <div style="display: flex; gap: 15px; justify-content: center; margin-top: 20px;">
-                <button id="confirm-btn-yes" class="btn-ganha" style="padding: 10px 20px;">Sim</button>
-                <button id="confirm-btn-no" class="btn-perdida" style="padding: 10px 20px;">Não</button>
+                <select id="filterSource" class="rounded-xl text-sm border border-gray-400 dark:border-slate-700 bg-white dark:bg-slate-950 px-2 py-2">
+                  <option value="">Todas as origens</option>
+                  <option>Outbound</option>
+                  <option>Inbound</option>
+                  <option>Indicação</option>
+                  <option>Vanguarda</option>
+                </select>
+                <button id="btnReload" class="inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800">
+                  <svg class="h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="currentColor" d="M6.7 6.7A7 7 0 0 1 19 10h2a9 9 0 0 0-16.1-5.2L3 2v7h7L6.7 6.7Zm10.6 10.6A7 7 0 0 1 5 14H3a9 9 0 0 0 16.1 5.2L21 22v-7h-7l3.3 2.3Z"/></svg>
+                  Atualizar
+                </button>
+              </div>
             </div>
+            
+            <!-- BULK ACTIONS BAR -->
+            <div id="bulkActionsBar" class="hidden flex items-center justify-between gap-3 mb-4 p-3 bg-brand-50 dark:bg-brand-900/20 border border-brand-200 dark:border-brand-800 rounded-xl">
+                <p id="selectionCount" class="text-sm font-medium text-brand-700 dark:text-brand-200">0 itens selecionados</p>
+                <div>
+                    <button id="btnBulkEdit" class="px-3 py-1.5 text-xs rounded-lg border border-slate-300 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700">Editar em massa</button>
+                    <button id="btnBulkDelete" class="ml-2 px-3 py-1.5 text-xs rounded-lg border border-rose-300 text-rose-700 dark:border-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-900/20">Excluir selecionados</button>
+                </div>
+            </div>
+
+            <div class="overflow-auto scroll-thin rounded-xl border border-slate-200 dark:border-slate-800">
+              <table class="min-w-full divide-y divide-slate-200 dark:divide-slate-800">
+                <thead class="bg-slate-50 dark:bg-slate-950">
+                  <tr class="text-left text-[11px] uppercase tracking-wide text-slate-500">
+                    <th class="p-0 w-9 text-center">
+                      <input id="selectAllCheckbox" type="checkbox" class="rounded border-gray-400 text-brand-600 focus:ring-brand-500" />
+                    </th>
+                    <th class="px-4 py-3">Nome</th>
+                    <th class="px-4 py-3">Contato</th>
+                    <th class="px-4 py-3">Origem</th>
+                    <th class="px-4 py-3">Interesse</th>
+                    <th class="px-4 py-3">Criado</th>
+                    <th class="px-4 py-3 text-right">Ações</th>
+                  </tr>
+                </thead>
+                <tbody id="tbody" class="divide-y divide-slate-200 dark:divide-slate-800 text-sm"></tbody>
+              </table>
+            </div>
+
+            <!-- Pagination -->
+            <div class="flex items-center justify-between mt-4">
+              <p id="countInfo" class="text-xs text-slate-500 dark:text-slate-400">0 leads</p>
+              <div class="flex items-center gap-2">
+                <button id="prevPage" class="px-3 py-1.5 text-sm rounded-lg border border-slate-200 dark:border-slate-700 disabled:opacity-40">Anterior</button>
+                <span id="pageLabel" class="text-xs text-slate-500 dark:text-slate-400">1</span>
+                <button id="nextPage" class="px-3 py-1.5 text-sm rounded-lg border border-slate-200 dark:border-slate-700 disabled:opacity-40">Próxima</button>
+              </div>
+            </div>
+          </div>
+        </section>
+      </div>
+    </main>
+  </div>
+
+  <!-- MODAL (View/Edit) -->
+  <div id="modal" class="fixed inset-0 z-50 hidden">
+    <div class="absolute inset-0 bg-slate-900/50 backdrop-blur-sm"></div>
+    <div class="relative max-w-2xl mx-auto mt-20 bg-white dark:bg-slate-900 rounded-2xl shadow-soft border border-slate-200 dark:border-slate-800 p-6">
+      <div class="flex items-start justify-between mb-4">
+        <h3 class="text-base font-semibold">Detalhes do Lead</h3>
+        <button id="modalClose" class="rounded-xl p-2 hover:bg-slate-100 dark:hover:bg-slate-800">
+          <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="currentColor" d="M6.4 5l12.7 12.7l-1.4 1.4L5 6.4L6.4 5Zm12.7 1.4L6.4 19.1L5 17.7L17.7 5l1.4 1.4Z"/></svg>
+        </button>
+      </div>
+      <form id="editForm" class="space-y-3">
+        <input type="hidden" id="editId" />
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs mb-1" for="editName">Nome</label>
+            <input id="editName" class="w-full rounded-xl border-gray-400 dark:border-slate-700 bg-white dark:bg-slate-950 px-3 py-2 text-sm" />
+          </div>
+          <div>
+            <label class="block text-xs mb-1" for="editEmail">E-mail</label>
+            <input id="editEmail" type="email" class="w-full rounded-xl border-gray-400 dark:border-slate-700 bg-white dark:bg-slate-950 px-3 py-2 text-sm" />
+          </div>
+          <div>
+            <label class="block text-xs mb-1" for="editPhone">Telefone</label>
+            <input id="editPhone" class="w-full rounded-xl border-gray-400 dark:border-slate-700 bg-white dark:bg-slate-950 px-3 py-2 text-sm" />
+          </div>
+          <div>
+            <label class="block text-xs mb-1" for="editSource">Origem</label>
+            <select id="editSource" class="w-full rounded-xl border-gray-400 dark:border-slate-700 bg-white dark:bg-slate-950 px-3 py-2 text-sm">
+              <option value="">Selecione…</option>
+              <option>Outbound</option>
+              <option>Inbound</option>
+              <option>Indicação</option>
+              <option>Vanguarda</option>
+            </select>
+          </div>
         </div>
+        <div class="grid grid-cols-1 sm:grid-cols-1 gap-3">
+          <div>
+            <label class="block text-xs mb-1" for="editInterest">Interesse</label>
+            <input id="editInterest" class="w-full rounded-xl border-gray-400 dark:border-slate-700 bg-white dark:bg-slate-950 px-3 py-2 text-sm" />
+          </div>
+        </div>
+        <div>
+          <label class="block text-xs mb-1" for="editNotes">Observações</label>
+          <textarea id="editNotes" rows="3" class="w-full rounded-xl border-gray-400 dark:border-slate-700 bg-white dark:bg-slate-950 px-3 py-2 text-sm"></textarea>
+        </div>
+        <div class="flex items-center gap-2 justify-end pt-2">
+          <div class="flex items-center gap-2">
+            <button id="btnDelete" type="button" class="inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm border border-red-300 text-red-700 dark:border-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20">Excluir</button>
+            <button class="inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm bg-brand-600 hover:bg-brand-700 text-white">Salvar alterações</button>
+          </div>
+        </div>
+      </form>
     </div>
+  </div>
+
+  <!-- MODAL (Bulk Edit) -->
+  <div id="bulkEditModal" class="fixed inset-0 z-50 hidden">
+    <div class="absolute inset-0 bg-slate-900/50 backdrop-blur-sm"></div>
+    <div class="relative max-w-sm mx-auto mt-20 bg-white dark:bg-slate-900 rounded-2xl shadow-soft border border-slate-200 dark:border-slate-800 p-6">
+        <div class="flex items-start justify-between mb-4">
+            <h3 class="text-base font-semibold">Edição em Massa</h3>
+            <button id="bulkEditModalClose" class="rounded-xl p-2 hover:bg-slate-100 dark:hover:bg-slate-800">
+                <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="currentColor" d="M6.4 5l12.7 12.7l-1.4 1.4L5 6.4L6.4 5Zm12.7 1.4L6.4 19.1L5 17.7L17.7 5l1.4 1.4Z"/></svg>
+            </button>
+        </div>
+        <form id="bulkEditForm" class="space-y-3">
+            <div>
+                <label class="block text-xs mb-1" for="bulkEditSource">Alterar Origem para:</label>
+                <select id="bulkEditSource" class="w-full rounded-xl border-gray-400 dark:border-slate-700 bg-white dark:bg-slate-950 px-3 py-2 text-sm">
+                    <option value="">Manter original</option>
+                    <option>Outbound</option>
+                    <option>Inbound</option>
+                    <option>Indicação</option>
+                    <option>Vanguarda</option>
+                </select>
+            </div>
+            <div class="flex items-center justify-end pt-2">
+                <button type="submit" class="inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm bg-brand-600 hover:bg-brand-700 text-white">Aplicar Alterações</button>
+            </div>
+        </form>
+    </div>
+  </div>
+
+  <!-- TOASTS -->
+  <div id="toast" class="fixed bottom-4 left-1/2 -translate-x-1/2 hidden"></div>
+
+  <script>
+    // ==== CONFIG SUPABASE ====================================================
+    const SUPABASE_URL = 'https://tzwzgbulgfiibgodmige.supabase.co';
+    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR6d3pnYnVsZ2ZpaWJnb2RtaWdlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTE2MzUyNjYsImV4cCI6MjA2NzIxMTI2Nn0.5BmYUgPf1IpOGjgaRtKfgssZr_iIsSflNd3hxEZnwb0';
+
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    
+    // ==== STATE ==============================================================
+    const state = {
+      rows: [],
+      page: 1,
+      pageSize: 10,
+      total: 0,
+      filters: {
+        q: '',
+        source: ''
+      },
+      selectedIds: []
+    }
+
+    dayjs.extend(window.dayjs_plugin_utc);
+    dayjs.extend(window.dayjs_plugin_timezone);
+
+    // ==== HELPERS ============================================================
+    const $ = (sel) => document.querySelector(sel);
+
+    function fmtDate(iso) {
+      if (!iso) return '-';
+      return dayjs(iso).format('DD/MM/YYYY HH:mm');
+    }
+
+    function showToast(msg, type='ok') {
+      const toast = $('#toast');
+      const base = 'rounded-xl px-4 py-2 shadow-soft border text-sm';
+      const theme = type === 'err'
+        ? 'bg-rose-50 border-rose-200 text-rose-700 dark:bg-rose-900/30 dark:text-rose-200 dark:border-rose-800'
+        : 'bg-emerald-50 border-emerald-200 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-200 dark:border-emerald-800';
+      toast.className = `${base} ${theme} fixed bottom-4 left-1/2 -translate-x-1/2`;
+      toast.textContent = msg;
+      toast.style.display = 'block';
+      setTimeout(() => toast.style.display = 'none', 2600);
+    }
+
+    function phoneMask(v) {
+      if (!v) return '';
+      const digits = v.replace(/\D/g, '').slice(0, 11);
+      if (digits.length <= 10) {
+        return digits
+          .replace(/(\d{2})(\d)/, '($1) $2')
+          .replace(/(\d{4})(\d)/, '$1-$2');
+      }
+      return digits
+        .replace(/(\d{2})(\d)/, '($1) $2')
+        .replace(/(\d{5})(\d)/, '$1-$2');
+    }
+
+    // ==== DATA ACCESS ========================================================
+    async function fetchLeads() {
+      state.selectedIds = [];
+      updateBulkActionsUI();
+      if ($('#selectAllCheckbox')) $('#selectAllCheckbox').checked = false;
+
+      const { q, source } = state.filters;
+      const from = (state.page - 1) * state.pageSize;
+      const to = from + state.pageSize - 1;
+
+      let query = supabase.from('leads').select('*', { count: 'exact' }).order('created_at', { ascending: false }).range(from, to);
+
+      if (source) query = query.eq('source', source);
+      
+      const { data, error, count } = await query;
+      if (error) { console.error(error); showToast('Erro ao carregar leads: ' + error.message, 'err'); return; }
+
+      let rows = data || [];
+      if (q) {
+        const t = q.toLowerCase();
+        rows = rows.filter(r => [r.name, r.email, r.phone, r.interest, r.notes].some(x => (x || '').toLowerCase().includes(t)));
+      }
+
+      state.rows = rows;
+      state.total = count || rows.length;
+      renderTable();
+    }
+
+    async function insertLead(payload) {
+      const { data, error } = await supabase.from('leads').insert(payload).select().single();
+      if (error) throw error;
+      return data;
+    }
+
+    async function updateLead(id, payload) {
+      const { data, error } = await supabase.from('leads').update(payload).eq('id', id).select().single();
+      if (error) throw error;
+      return data;
+    }
+
+    async function deleteLead(id) {
+      const { error } = await supabase.from('leads').delete().eq('id', id);
+      if (error) throw error;
+      return true;
+    }
+
+    // ==== RENDER =============================================================
+    function renderTable() {
+      const tbody = $('#tbody');
+      tbody.innerHTML = '';
+
+      if (state.rows.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="7" class="text-center p-8 text-slate-500">Nenhum lead encontrado.</td></tr>`;
+      } else {
+        for (const r of state.rows) {
+          const isChecked = state.selectedIds.includes(r.id);
+          const tr = document.createElement('tr');
+          tr.className = 'hover:bg-slate-50 dark:hover:bg-slate-800/60';
+          tr.innerHTML = `
+            <td class="p-0 text-center">
+              <input type="checkbox" class="row-checkbox rounded border-gray-400 text-brand-600 focus:ring-brand-500" data-id="${r.id}" ${isChecked ? 'checked' : ''} />
+            </td>
+            <td class="px-4 py-3">
+              <div class="font-medium">${r.name || '-'}</div>
+              <div class="text-xs text-slate-500 truncate" title="${r.id}">${(r.id || '').substring(0,8)}</div>
+            </td>
+            <td class="px-4 py-3">
+              <div class="text-sm">${r.email || '-'}</div>
+              <div class="text-xs text-slate-500">${phoneMask(r.phone) || '-'}</div>
+            </td>
+            <td class="px-4 py-3">${r.source || '-'}</td>
+            <td class="px-4 py-3">${r.interest || '-'}</td>
+            <td class="px-4 py-3">${fmtDate(r.created_at)}</td>
+            <td class="px-4 py-3">
+              <div class="flex items-center justify-end gap-2">
+                <button class="px-2 py-1.5 text-xs rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800" data-action="edit" data-id="${r.id}">Editar</button>
+              </div>
+            </td>
+          `;
+          tbody.appendChild(tr);
+        }
+      }
+
+      $('#countInfo').textContent = `${state.total} lead${state.total === 1 ? '' : 's'}`;
+      $('#pageLabel').textContent = `${state.page}`;
+      $('#prevPage').disabled = state.page <= 1;
+      const maxPage = Math.ceil(state.total / state.pageSize) || 1;
+      $('#nextPage').disabled = state.page >= maxPage;
+
+      tbody.querySelectorAll('button[data-action="edit"]').forEach(btn => btn.addEventListener('click', () => openEdit(btn.dataset.id)));
+    }
+
+    // ==== UI ACTIONS =========================================================
+    $('#btnDark').addEventListener('click', () => {
+      const isDark = document.documentElement.classList.toggle('dark');
+      $('#iconMoon').classList.toggle('hidden', isDark);
+      $('#iconSun').classList.toggle('hidden', !isDark);
+      localStorage.setItem('theme', isDark ? 'dark' : 'light');
+    });
+
+    function applyTheme() {
+      const pref = localStorage.getItem('theme') || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+      document.documentElement.classList.toggle('dark', pref === 'dark');
+      $('#iconMoon').classList.toggle('hidden', pref === 'dark');
+      $('#iconSun').classList.toggle('hidden', pref !== 'dark');
+    }
+
+    $('#phone').addEventListener('input', (e) => e.target.value = phoneMask(e.target.value));
+    $('#editPhone').addEventListener('input', (e) => e.target.value = phoneMask(e.target.value));
 
 
-    <script>
-        document.addEventListener('DOMContentLoaded', async () => {
-            // --- Configuração do Supabase ---
-            const SUPABASE_URL = 'https://tzwzgbulgfiibgodmige.supabase.co';
-            const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR6d3pnYnVsZ2ZpaWJnb2RtaWdlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTE2MzUyNjYsImV4cCI6MjA2NzIxMTI2Nn0.5BmYUgPf1IpOGjgaRtKfgssZr_iIsSflNd3hxEZnwb0';
+    $('#leadForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const payload = {
+        name: $('#name').value.trim(),
+        email: $('#email').value.trim() || null,
+        phone: $('#phone').value.trim() || null,
+        source: $('#source').value || null,
+        interest: $('#interest').value.trim() || null,
+        notes: $('#notes').value.trim() || null,
+      }
+      if (!payload.name) { showToast('Nome é obrigatório', 'err'); return; }
+
+      try {
+        await insertLead(payload);
+        showToast('Lead salvo com sucesso!');
+        e.target.reset();
+        state.page = 1;
+        await fetchLeads();
+      } catch (err) {
+        console.error(err); 
+        showToast('Erro ao salvar lead', 'err');
+      }
+    });
+
+    $('#btnClear').addEventListener('click', () => $('#leadForm').reset());
+
+    $('#btnReload').addEventListener('click', async (e) => {
+      state.page = 1;
+      await fetchLeads();
+      showToast('Lista atualizada');
+    });
+
+    $('#search').addEventListener('input', (e) => { state.filters.q = e.target.value; fetchLeads(); });
+    $('#filterSource').addEventListener('change', (e) => { state.filters.source = e.target.value; state.page = 1; fetchLeads(); });
+
+    $('#prevPage').addEventListener('click', async () => { if (state.page > 1) { state.page--; await fetchLeads(); }});
+    $('#nextPage').addEventListener('click', async () => { const maxPage = Math.ceil(state.total / state.pageSize) || 1; if (state.page < maxPage) { state.page++; await fetchLeads(); }});
+
+    // MODAL
+    function openEdit(id) {
+      const row = state.rows.find(r => r.id == id);
+      if (!row) return;
+      $('#editId').value = row.id;
+      $('#editName').value = row.name || '';
+      $('#editEmail').value = row.email || '';
+      $('#editPhone').value = phoneMask(row.phone);
+      $('#editSource').value = row.source || '';
+      $('#editInterest').value = row.interest || '';
+      $('#editNotes').value = row.notes || '';
+      $('#modal').classList.remove('hidden');
+    }
+
+    $('#modalClose').addEventListener('click', () => $('#modal').classList.add('hidden'));
+    window.addEventListener('keydown', (e) => { if (e.key === 'Escape') $('#modal').classList.add('hidden') })
+
+    $('#editForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const id = $('#editId').value;
+      const payload = {
+        name: $('#editName').value.trim(),
+        email: $('#editEmail').value.trim() || null,
+        phone: $('#editPhone').value.trim() || null,
+        source: $('#editSource').value || null,
+        interest: $('#editInterest').value.trim() || null,
+        notes: $('#editNotes').value.trim() || null,
+      }
+      try {
+        await updateLead(id, payload);
+        showToast('Lead atualizado');
+        $('#modal').classList.add('hidden');
+        await fetchLeads();
+      } catch (err) {
+        console.error(err); 
+        showToast('Erro ao atualizar', 'err');
+      }
+    })
+
+    $('#btnDelete').addEventListener('click', async () => {
+      const id = $('#editId').value;
+      if (!confirm('Confirma excluir este lead?')) return;
+      try {
+        await deleteLead(id);
+        showToast('Lead excluído');
+        $('#modal').classList.add('hidden');
+        await fetchLeads();
+      } catch (err) { console.error(err); showToast('Erro ao excluir', 'err'); }
+    })
+
+    // EXPORT XLSX
+    $('#btnExport').addEventListener('click', async () => {
+      try {
+        const { data, error } = await supabase.from('leads').select('*').order('created_at', { ascending: false });
+        if (error) throw error;
+        const rows = (data || []).map(r => ({
+          id: r.id, name: r.name, email: r.email, phone: r.phone,
+          source: r.source, interest: r.interest,
+          notes: r.notes, created_at: r.created_at, updated_at: r.updated_at,
+        }));
+        const ws = XLSX.utils.json_to_sheet(rows);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, 'Leads');
+        const fname = `leads_${dayjs().format('YYYYMMDD_HHmm')}.xlsx`;
+        XLSX.writeFile(wb, fname);
+        showToast('Arquivo exportado');
+      } catch (err) { 
+        console.error(err); 
+        showToast('Erro ao exportar', 'err'); 
+      }
+    });
+
+    // IMPORT XLSX/CSV
+    $('#fileImport').addEventListener('change', async (e) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+      try {
+        const buf = await file.arrayBuffer();
+        const wb = XLSX.read(buf, { type: 'array' });
+        const ws = wb.Sheets[wb.SheetNames[0]];
+        const json = XLSX.utils.sheet_to_json(ws, { defval: '' });
+
+        const payloads = json.map(row => ({
+          name: (row.name || row.Nome || '').toString().trim(),
+          email: (row.email || row.Email || '').toString().trim() || null,
+          phone: (row.phone || row.Telefone || '').toString().trim() || null,
+          source: (row.source || row.Origem || '').toString().trim() || null,
+          interest: (row.interest || row.Interesse || '').toString().trim() || null,
+          notes: (row.notes || row.Observacoes || '').toString().trim() || null,
+        })).filter(p => p.name);
+
+        if (!payloads.length) { showToast('Nenhuma linha válida encontrada', 'err'); return; }
+
+        const { error } = await supabase.from('leads').insert(payloads);
+        if (error) throw error;
+        showToast(`Importação concluída (${payloads.length} itens)`);
+        e.target.value = '';
+        await fetchLeads();
+      } catch (err) { 
+        console.error(err); 
+        showToast('Erro ao importar', 'err'); 
+      }
+    });
+    
+    // ==== BULK ACTIONS =======================================================
+    function updateBulkActionsUI() {
+        const bar = $('#bulkActionsBar');
+        const count = state.selectedIds.length;
+        if (count > 0) {
+            $('#selectionCount').textContent = `${count} item${count > 1 ? 's' : ''} selecionado${count > 1 ? 's' : ''}`;
+            bar.classList.remove('hidden');
+        } else {
+            bar.classList.add('hidden');
+        }
+    }
+
+    $('#selectAllCheckbox').addEventListener('click', (e) => {
+        const isChecked = e.target.checked;
+        state.selectedIds = isChecked ? state.rows.map(r => r.id) : [];
+        document.querySelectorAll('.row-checkbox').forEach(cb => cb.checked = isChecked);
+        updateBulkActionsUI();
+    });
+
+    $('#tbody').addEventListener('click', (e) => {
+        if (e.target.classList.contains('row-checkbox')) {
+            const id = e.target.dataset.id;
+            const isChecked = e.target.checked;
+            if (isChecked) {
+                if (!state.selectedIds.includes(id)) state.selectedIds.push(id);
+            } else {
+                state.selectedIds = state.selectedIds.filter(selectedId => selectedId !== id);
+            }
             
-            const { createClient } = window.supabase;
-            // CORREÇÃO: Desativar persistência de sessão para funcionar em iframes
-            const supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-                auth: {
-                    persistSession: false
-                }
-            });
-
-            // --- Elementos Globais ---
-            const loginSection = document.getElementById('login-section');
-            const signupSection = document.getElementById('signup-section');
-            const appSection = document.getElementById('app-section');
-            const loginForm = document.getElementById('login-form');
-            const signupForm = document.getElementById('signup-form');
-            const loginErrorMessage = document.getElementById('login-error-message');
-            const signupErrorMessage = document.getElementById('signup-error-message');
-            const showSignupBtn = document.getElementById('show-signup');
-            const showLoginBtn = document.getElementById('show-login');
-            const themeToggleBtn = document.getElementById('theme-toggle-btn');
-
-
-            // --- Lógica do Tema Escuro ---
-            const applyTheme = (theme) => {
-                if (theme === 'dark') {
-                    document.body.classList.add('dark-mode');
-                } else {
-                    document.body.classList.remove('dark-mode');
-                }
-            };
-
-            themeToggleBtn.addEventListener('click', () => {
-                const isDarkMode = document.body.classList.toggle('dark-mode');
-                const newTheme = isDarkMode ? 'dark' : 'light';
-                localStorage.setItem('theme', newTheme);
-                applyTheme(newTheme);
-                // RE-RENDERIZA O GRÁFICO COM AS CORES DO NOVO TEMA
-                if (document.querySelector('.content-section.active').id === 'dashboard') {
-                   updateAllPanels();
-                }
-            });
-            
-            // Aplicar tema salvo no carregamento da página
-            const savedTheme = localStorage.getItem('theme') || 'light';
-            applyTheme(savedTheme);
-
-
-            // --- Função Principal de Inicialização da Aplicação ---
-            const startApp = async (user) => {
-                loginSection.style.display = 'none';
-                signupSection.style.display = 'none';
-                appSection.style.display = 'flex';
-
-                const { data: profile } = await supabaseClient.from('profiles').select('full_name').eq('id', user.id).single();
-                const userName = profile?.full_name || user.email;
-                const userId = user.id;
-
-                // Variáveis globais para armazenar os dados carregados
-                let allActivities = [];
-                let allPayments = [];
-                // Variável para o gráfico
-                let channelSalesChart = null;
-
-                // --- Seletores de Elementos da Aplicação ---
-                const navLinks = document.querySelectorAll('.nav-link');
-                const contentSections = document.querySelectorAll('.content-section');
-                const historyContainer = document.getElementById('history-table-container');
-                const propostasContainer = document.getElementById('propostas-container');
-                const propostasCloserFilter = document.getElementById('propostas-closer-filter');
-                const recebiveisContainer = document.getElementById('recebiveis-table-container');
-                const form = document.getElementById('activity-form');
-                const lancamentosContainer = document.getElementById('lancamentos-container');
-                const addLancamentoBtn = document.getElementById('add-lancamento-btn');
-                const userFilter = document.getElementById('user-filter');
-                const closerNameForm = document.getElementById('closer-name-form');
-                const channelFilterDash = document.getElementById('channel-filter-dash');
-                const datePresetFilter = document.getElementById('date-preset-filter');
-                const customDateFilters = document.getElementById('custom-date-filters');
-                const startDateFilter = document.getElementById('start-date-filter');
-                const endDateFilter = document.getElementById('end-date-filter');
-                const datePresetForm = document.getElementById('date-preset-form');
-                const customDateFormGroup = document.getElementById('custom-date-form-group');
-                const dateFormInput = document.getElementById('date-form');
-                const editModal = document.getElementById('edit-modal');
-                const editForm = document.getElementById('edit-activity-form');
-                const modalCloseBtn = document.getElementById('modal-close-btn');
-                const notificationModal = document.getElementById('notification-modal');
-                const notificationMessage = document.getElementById('notification-message');
-                const notificationCloseBtn = document.getElementById('notification-close-btn');
-                const logoutButton = document.getElementById('logout-button');
-                const userDisplayName = document.getElementById('user-display-name');
-                const clearHistoryFiltersBtn = document.getElementById('clear-history-filters-btn');
-                const historyDatePresetFilter = document.getElementById('history-date-preset-filter');
-                const historyCustomDateFilters = document.getElementById('history-custom-date-filters');
-                const historyStartDateFilter = document.getElementById('history-start-date-filter');
-                const historyEndDateFilter = document.getElementById('history-end-date-filter');
-                const historyTypeFilter = document.getElementById('history-type-filter');
-                const recebiveisCloserFilter = document.getElementById('recebiveis-closer-filter');
-                const recebiveisDatePresetFilter = document.getElementById('recebiveis-date-preset-filter');
-                const recebiveisCustomDateFilters = document.getElementById('recebiveis-custom-date-filters');
-                const recebiveisStartDateFilter = document.getElementById('recebiveis-start-date-filter');
-                const recebiveisEndDateFilter = document.getElementById('recebiveis-end-date-filter');
-                const recebiveisPaymentDatePresetFilter = document.getElementById('recebiveis-payment-date-preset-filter');
-                const recebiveisPaymentCustomDateFilters = document.getElementById('recebiveis-payment-custom-date-filters');
-                const recebiveisPaymentStartDateFilter = document.getElementById('recebiveis-payment-start-date-filter');
-                const recebiveisPaymentEndDateFilter = document.getElementById('recebiveis-payment-end-date-filter');
-                const recebiveisStatusFilter = document.getElementById('recebiveis-status-filter');
-                const paymentModal = document.getElementById('payment-modal');
-                const paymentModalCloseBtn = document.getElementById('payment-modal-close-btn');
-                const addPaymentForm = document.getElementById('add-payment-form');
-                const paymentModalTitle = document.getElementById('payment-modal-title');
-                const paymentModalKpis = document.getElementById('payment-modal-kpis');
-                const paymentsListContainer = document.getElementById('payments-list-container');
-                const paymentActivityIdInput = document.getElementById('payment-activity-id');
-                // NOVOS SELETORES PARA MODAL DE CONFIRMAÇÃO E ÍCONE DE PERFIL
-                const confirmModal = document.getElementById('confirm-modal');
-                const confirmMessage = document.getElementById('confirm-message');
-                const confirmBtnYes = document.getElementById('confirm-btn-yes');
-                const confirmBtnNo = document.getElementById('confirm-btn-no');
-                const profileIcon = document.querySelector('.profile-icon');
-
-                userDisplayName.textContent = userName;
-
-                logoutButton.addEventListener('click', async () => {
-                    await supabaseClient.auth.signOut();
-                    window.location.reload();
-                });
-
-                // --- Funções de UI (Notificações, Modais, Formatação) ---
-                const showNotification = (message, type = 'info') => {
-                    notificationMessage.textContent = message;
-                    const modalContent = notificationModal.querySelector('.modal-content');
-                    modalContent.classList.remove('success', 'error');
-                    if (type === 'success' || type === 'error') {
-                        modalContent.classList.add(type);
-                    }
-                    notificationModal.classList.add('visible');
-                };
-
-                const closeNotification = () => {
-                    notificationModal.classList.remove('visible');
-                };
-
-                notificationCloseBtn.addEventListener('click', closeNotification);
-                notificationModal.addEventListener('click', (e) => {
-                    if (e.target === notificationModal) closeNotification();
-                });
-                
-                // NOVA FUNÇÃO PARA MODAL DE CONFIRMAÇÃO
-                const showConfirm = (message) => {
-                    return new Promise((resolve) => {
-                        confirmMessage.textContent = message;
-                        confirmModal.classList.add('visible');
-
-                        confirmBtnYes.onclick = () => {
-                            confirmModal.classList.remove('visible');
-                            resolve(true);
-                        };
-                        confirmBtnNo.onclick = () => {
-                            confirmModal.classList.remove('visible');
-                            resolve(false);
-                        };
-                    });
-                };
-                
-                // ADICIONADO EVENTO PARA ÍCONE DE PERFIL
-                profileIcon.addEventListener('click', () => {
-                    showNotification(`Olá, ${userName}! Funcionalidades de perfil em breve.`, 'info');
-                });
-
-                const toISODateString = (date) => {
-                    if (!date) return '';
-                    const d = new Date(date);
-                     // Adjust for timezone offset
-                    const timezoneOffset = d.getTimezoneOffset() * 60000;
-                    const adjustedDate = new Date(d.getTime() - timezoneOffset);
-                    return adjustedDate.toISOString().split('T')[0];
-                };
-                
-                const formatCurrency = (value) => {
-                    if (typeof value !== 'number') return 'R$ 0,00';
-                    return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-                };
-
-                // --- Lógica do Formulário de Lançamento Diário ---
-                const handleFormDatePresetChange = () => {
-                    const preset = datePresetForm.value;
-                    const today = new Date();
-                    let targetDate = new Date();
-
-                    if (preset === 'custom') {
-                        customDateFormGroup.style.display = 'block';
-                        dateFormInput.required = true;
-                        dateFormInput.value = '';
-                        return;
-                    }
-                    
-                    customDateFormGroup.style.display = 'none';
-                    dateFormInput.required = false;
-
-                    switch(preset) {
-                        case 'today': break;
-                        case 'yesterday': targetDate.setDate(today.getDate() - 1); break;
-                    }
-                    dateFormInput.value = toISODateString(targetDate);
-                };
-
-                datePresetForm.addEventListener('change', handleFormDatePresetChange);
-                handleFormDatePresetChange();
-                
-                const createLancamentoBlock = () => {
-                    const blockId = `block-${Date.now()}`;
-                    const block = document.createElement('div');
-                    block.className = 'lancamento-block';
-                    block.id = blockId;
-                    block.innerHTML = `
-                        <button type="button" class="remove-lancamento-btn" data-target="${blockId}">X</button>
-                        <div class="form-grid">
-                            <div class="form-group" id="lead-container-${blockId}"><label for="lead-name-${blockId}">Lead/Empresa</label><input type="text" id="lead-name-${blockId}" required></div>
-                            <div class="form-group"><label for="bdr-${blockId}">BDR</label><input type="text" id="bdr-${blockId}"></div>
-                            <div class="form-group"><label for="revenue-${blockId}">Faturamento da Empresa</label>
-                                <select id="revenue-${blockId}">
-                                    <option>Desconhecido</option>
-                                    <option>-50k</option>
-                                    <option>50k a 150k</option>
-                                    <option>150k a 750k</option>
-                                    <option>acima de 750k</option>
-                                </select>
-                            </div>
-                            <div class="form-group"><label for="channel-${blockId}">Canal</label><select id="channel-${blockId}"><option>Inbound</option><option>Outbound</option><option>Webinar</option><option>Canal Vanguarda</option></select></div>
-                            <div class="form-group"><label for="qualification-${blockId}">Qualificação</label>
-                                <select id="qualification-${blockId}">
-                                    <option>Não Identificado</option>
-                                    <option>Qualificado</option>
-                                    <option>Não Qualificado</option>
-                                </select>
-                            </div>
-                            <div class="form-group"><label for="reuniao-resgatada-${blockId}">Reunião Resgatada?</label><select id="reuniao-resgatada-${blockId}"><option>Não</option><option>Sim</option></select></div>
-                            <div class="form-group"><label for="activity-type-${blockId}">Tipo de Reunião</label>
-                                <select id="activity-type-${blockId}" required>
-                                    <option value="">Selecione o Tipo</option>
-                                    <option>R1</option>
-                                    <option>R2</option>
-                                    <option>R3</option>
-                                    <option>R4</option>
-                                    <option>R5</option>
-                                </select>
-                            </div>
-                            <div class="form-group"><label for="activity-status-${blockId}">Status da Atividade</label><select id="activity-status-${blockId}"><option>Reunião Realizada</option><option>Reunião Reagendada</option><option>No Show</option></select></div>
-                            <div class="form-group"><label for="proposal-sent-${blockId}">Proposta Enviada?</label><select id="proposal-sent-${blockId}"><option>Não</option><option>Sim</option></select></div>
-                            <div class="form-group"><label for="funnel-evolution-${blockId}">Evolução no Funil</label>
-                                <select id="funnel-evolution-${blockId}">
-                                    <option value="">Nenhuma</option>
-                                    <option>De R1 para R2</option>
-                                    <option>De R2 para R3</option>
-                                    <option>De R3 para R4</option>
-                                    <option>De R4 para R5</option>
-                                </select>
-                            </div>
-                            <div class="form-group"><label for="proposal-value-${blockId}">Valor da Proposta (R$)</label><input type="number" id="proposal-value-${blockId}" placeholder="7000"></div>
-                            <div class="form-group full-width"><label for="notes-${blockId}">Observações</label><textarea id="notes-${blockId}" placeholder="Adicione notas sobre a negociação..."></textarea></div>
-                        </div>
-                    `;
-                    lancamentosContainer.appendChild(block);
-
-                    const activityTypeSelect = document.getElementById(`activity-type-${blockId}`);
-                    activityTypeSelect.addEventListener('change', () => updateLeadInput(blockId, activityTypeSelect.value));
-                };
-
-                const updateLeadInput = (blockId, meetingType) => {
-                    const leadContainer = document.getElementById(`lead-container-${blockId}`);
-                    const currentLeadElement = document.getElementById(`lead-name-${blockId}`);
-
-                    if (meetingType.startsWith('R') && meetingType !== 'R1') {
-                        const stageNumber = parseInt(meetingType.substring(1));
-                        const previousStage = 'R' + (stageNumber - 1);
-                        const currentStage = meetingType;
-                        
-                        const myLeadsInPreviousStage = new Set(
-                            allActivities
-                                .filter(act => act.closer_id === userId && act.type === previousStage)
-                                .map(act => act.lead)
-                        );
-                        
-                        const eligibleLeads = [...myLeadsInPreviousStage].filter(lead => {
-                            const hasAdvanced = allActivities.some(a => a.lead === lead && a.type === currentStage && a.status === 'Reunião Realizada');
-                            const isClosed = allActivities.some(a => a.lead === lead && a.deal_outcome);
-
-                            const previousStageActivities = allActivities
-                                .filter(a => a.lead === lead && a.type === previousStage)
-                                .sort((a, b) => new Date(b.date) - new Date(a.date));
-
-                            let isBlockedByNoShow = false;
-                            if (previousStageActivities.length > 0) {
-                                const latestMeeting = previousStageActivities[0];
-                                if (latestMeeting.status === 'No Show') {
-                                    const wasRescued = allActivities.some(a => a.lead === lead && a.reuniao_resgatada === 'Sim');
-                                    if (!wasRescued) {
-                                        isBlockedByNoShow = true;
-                                    }
-                                }
-                            }
-
-                            return !hasAdvanced && !isClosed && !isBlockedByNoShow;
-                        });
-
-                        let selectHTML = `<label for="lead-name-${blockId}">Lead/Empresa</label>`;
-                        selectHTML += `<select id="lead-name-${blockId}" required>`;
-                        selectHTML += '<option value="">Selecione um Lead</option>';
-                        eligibleLeads.forEach(lead => {
-                            selectHTML += `<option value="${lead}">${lead}</option>`;
-                        });
-                        selectHTML += '</select>';
-                        
-                        leadContainer.innerHTML = selectHTML;
-
-                        const newLeadSelect = document.getElementById(`lead-name-${blockId}`);
-                        newLeadSelect.addEventListener('change', () => {
-                            const selectedLeadName = newLeadSelect.value;
-                            if (!selectedLeadName) return;
-
-                            const previousActivity = allActivities
-                                .filter(act => act.lead === selectedLeadName && act.type === previousStage)
-                                .sort((a, b) => new Date(b.date) - new Date(a.date))[0];
-
-                            if (previousActivity) {
-                                document.getElementById(`bdr-${blockId}`).value = previousActivity.bdr || '';
-                                document.getElementById(`revenue-${blockId}`).value = previousActivity.company_revenue || 'Desconhecido';
-                                document.getElementById(`channel-${blockId}`).value = previousActivity.channel || 'Inbound';
-                                document.getElementById(`qualification-${blockId}`).value = previousActivity.qualification || 'Qualificado';
-                                document.getElementById(`reuniao-resgatada-${blockId}`).value = previousActivity.reuniao_resgatada || 'Não';
-                            }
-                        });
-
-                    } else {
-                        if (currentLeadElement.tagName.toLowerCase() === 'select') {
-                            leadContainer.innerHTML = `<label for="lead-name-${blockId}">Lead/Empresa</label><input type="text" id="lead-name-${blockId}" required>`;
-                        }
-                    }
-                };
-
-
-                addLancamentoBtn.addEventListener('click', createLancamentoBlock);
-                lancamentosContainer.addEventListener('click', (e) => {
-                    if (e.target.classList.contains('remove-lancamento-btn')) {
-                        const targetId = e.target.getAttribute('data-target');
-                        document.getElementById(targetId).remove();
-                    }
-                });
-                
-                // --- Funções de Dados (Fetch, Filter, Update) ---
-                const fetchFilteredActivities = async (source) => {
-                    let query = supabaseClient.from('activities').select('*');
-                    
-                    let startDate, endDate;
-
-                    if (source === 'dashboard') {
-                        const selectedUser = userFilter.value;
-                        const selectedChannel = channelFilterDash.value;
-                        startDate = startDateFilter.value;
-                        endDate = endDateFilter.value;
-
-                        if (selectedUser !== 'all') query = query.eq('closer', selectedUser);
-                        if (selectedChannel !== 'all') query = query.eq('channel', selectedChannel);
-                    }
-                    // O filtro do histórico agora é feito no lado do cliente, esta parte não é mais necessária para 'history'
-                    
-                    if (startDate) query = query.gte('date', startDate);
-                    if (endDate) query = query.lte('date', endDate);
-                    
-                    const { data, error } = await query;
-                    
-                    if (error) {
-                        console.error(`Erro ao buscar dados para ${source}:`, error);
-                        showNotification('Falha ao carregar dados do banco.', 'error');
-                        return [];
-                    }
-                    return data;
-                };
-
-                async function fetchInitialData() {
-                    const [activitiesRes, paymentsRes] = await Promise.all([
-                        supabaseClient.from('activities').select('*'),
-                        supabaseClient.from('payments').select('*')
-                    ]);
-
-                    if (activitiesRes.error || paymentsRes.error) {
-                        console.error('Erro ao buscar dados iniciais:', activitiesRes.error || paymentsRes.error);
-                        showNotification('Não foi possível carregar os dados do banco.', 'error');
-                        return;
-                    }
-                    allActivities = activitiesRes.data;
-                    allPayments = paymentsRes.data;
-                    
-                    await populateCloserFilters();
-                    await updateAllPanels();
-                }
-                
-                const updateAllPanels = async () => {
-                    const dashboardData = await fetchFilteredActivities('dashboard');
-                    updateDashboard(dashboardData);
-                    updateRanking(dashboardData);
-                    updatePipelineWidgets(dashboardData);
-                    updateChannelMetrics(dashboardData);
-                    updateChannelChart(dashboardData);
-                    
-                    await renderPropostas();
-                    renderTable(); // Não é mais async
-                    await renderRecebiveis();
-                };
-
-                // --- Funções de Renderização do Dashboard ---
-                const updateDashboard = (data) => {
-                    const vendas = data.filter(act => act.deal_outcome === 'Ganha');
-                    const receitaTotal = vendas.reduce((sum, act) => sum + (act.sale_value || 0), 0);
-                    
-                    document.getElementById('kpi-valor-vendas-total').textContent = formatCurrency(receitaTotal);
-                    
-                    document.getElementById('kpi-vendas').textContent = vendas.length;
-                    document.getElementById('kpi-propostas').textContent = data.filter(act => act.proposal_sent === 'Sim').length;
-                    document.getElementById('kpi-reunioes-resgatadas').textContent = data.filter(act => act.reuniao_resgatada === 'Sim').length;
-                    document.getElementById('kpi-perdidas').textContent = data.filter(act => act.deal_outcome === 'Perdida').length;
-                    const leadsComReuniao = new Set(data.filter(act => act.type && act.type.startsWith('R')).map(act => act.lead));
-                    document.getElementById('kpi-leads-atendimento').textContent = leadsComReuniao.size;
-                    document.getElementById('kpi-reunioes-totais').textContent = data.filter(act => act.type && act.type.startsWith('R')).length;
-                    document.getElementById('kpi-realizadas').textContent = data.filter(act => act.status === 'Reunião Realizada').length;
-                    document.getElementById('kpi-qualificadas').textContent = data.filter(act => act.qualification === 'Qualificado').length;
-                    document.getElementById('kpi-desqualificadas').textContent = data.filter(act => act.qualification === 'Não Qualificado').length;
-                    document.getElementById('kpi-reagendadas').textContent = data.filter(act => act.status === 'Reunião Reagendada').length;
-                    document.getElementById('kpi-no-show').textContent = data.filter(act => act.status === 'No Show').length;
-                    
-                    const leadsComProposta = new Set(allActivities.filter(act => act.proposal_sent === 'Sim').map(act => act.lead));
-                    const leadsFechados = new Set(allActivities.filter(act => act.deal_outcome).map(act => act.lead));
-                    const leadsAbertosComProposta = [...leadsComProposta].filter(lead => !leadsFechados.has(lead));
-                    let valorPropostasAbertas = 0;
-                    leadsAbertosComProposta.forEach(lead => {
-                        const propostasDoLead = allActivities.filter(act => act.lead === lead && act.proposal_value > 0).sort((a, b) => new Date(b.date) - new Date(a.date));
-                        if (propostasDoLead.length > 0) { valorPropostasAbertas += propostasDoLead[0].proposal_value; }
-                    });
-                    document.getElementById('kpi-propostas-aberto').innerHTML = formatCurrency(valorPropostasAbertas);
-                };
-                
-                const updateChannelChart = (data) => {
-                    const ctx = document.getElementById('channelSalesChart').getContext('2d');
-                    const channels = ['Inbound', 'Outbound', 'Webinar', 'Canal Vanguarda'];
-                    
-                    const salesByChannel = channels.map(channel => {
-                        return data
-                            .filter(act => act.channel === channel && act.deal_outcome === 'Ganha')
-                            .reduce((sum, act) => sum + (act.sale_value || 0), 0);
-                    });
-
-                    const isDarkMode = document.body.classList.contains('dark-mode');
-                    const gridColor = isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)';
-                    const labelColor = isDarkMode ? '#F7FAFC' : '#2D3748';
-
-                    if (channelSalesChart) {
-                        channelSalesChart.destroy();
-                    }
-
-                    channelSalesChart = new Chart(ctx, {
-                        type: 'bar',
-                        data: {
-                            labels: channels,
-                            datasets: [{
-                                label: 'Valor Total Vendido por Canal',
-                                data: salesByChannel,
-                                backgroundColor: [
-                                    'rgba(229, 62, 117, 0.7)',
-                                    'rgba(72, 187, 120, 0.7)',
-                                    'rgba(26, 44, 80, 0.7)',
-                                    'rgba(113, 128, 150, 0.7)'
-                                ],
-                                borderWidth: 1
-                            }]
-                        },
-                        options: {
-                            responsive: true,
-                            plugins: { legend: { display: false } },
-                            scales: {
-                                y: {
-                                    beginAtZero: true,
-                                    ticks: {
-                                        color: labelColor,
-                                        callback: (value) => `R$ ${(value / 1000)}k`
-                                    },
-                                    grid: { color: gridColor }
-                                },
-                                x: { ticks: { color: labelColor }, grid: { color: gridColor } }
-                            }
-                        }
-                    });
-                };
-                
-                const updateChannelMetrics = (data) => {
-                    const container = document.getElementById('channel-metrics-container');
-                    const channels = ['Inbound', 'Outbound', 'Webinar', 'Canal Vanguarda'];
-                    let html = '';
-                    channels.forEach(channel => {
-                        const channelData = data.filter(act => act.channel === channel);
-                        const channelSales = channelData.filter(act => act.deal_outcome === 'Ganha');
-                        const channelRevenue = channelSales.reduce((sum, act) => sum + (act.sale_value || 0), 0);
-                        const channelNoShows = channelData.filter(act => act.status === 'No Show').length;
-                        html += `<div class="channel-metric-item">
-                                    <div class="channel-name">${channel}</div>
-                                    <div class="metric"><span class="metric-label">Reuniões</span><span class="metric-value">${channelData.length}</span></div>
-                                    <div class="metric"><span class="metric-label">Vendas</span><span class="metric-value">${channelSales.length}</span></div>
-                                    <div class="metric"><span class="metric-label">No Show</span><span class="metric-value">${channelNoShows}</span></div>
-                                    <div class="metric"><span class="metric-label">Valor Vendas</span><span class="metric-value">${formatCurrency(channelRevenue)}</span></div>
-                                </div>`;
-                    });
-                    container.innerHTML = html;
-                };
-
-                const updatePipelineWidgets = (data) => {
-                    const stageContainer = document.getElementById('stage-pipeline-container');
-                    const evolutionContainer = document.getElementById('evolution-pipeline-container');
-                    const stages = ['R1', 'R2', 'R3', 'R4', 'R5'];
-
-                    const allLeadsInR1 = new Set(data.filter(act => act.type === 'R1').map(act => act.lead));
-                    const noShowLeads = new Set();
-                    allLeadsInR1.forEach(lead => {
-                        const r1Activities = data.filter(a => a.lead === lead && a.type === 'R1').sort((a, b) => new Date(b.date) - new Date(a.date));
-                        if (r1Activities.length > 0) {
-                            const latestR1 = r1Activities[0];
-                            if (latestR1.status === 'No Show') {
-                                const wasRescued = data.some(a => a.lead === lead && a.reuniao_resgatada === 'Sim');
-                                if (!wasRescued) {
-                                    noShowLeads.add(lead);
-                                }
-                            }
-                        }
-                    });
-
-                    const filteredDataForPipeline = data.filter(act => !noShowLeads.has(act.lead));
-
-                    const stageCounts = stages.map(stage => new Set(filteredDataForPipeline.filter(act => act.type === stage).map(act => act.lead)).size);
-                    const maxStageCount = Math.max(...stageCounts, 1);
-                    let stageHTML = '';
-                    stages.forEach((stage, index) => {
-                        const count = stageCounts[index];
-                        const widthPercent = (count / maxStageCount) * 100;
-                        stageHTML += `<div class="pipeline-item"><div class="pipeline-label">${stage}</div><div class="pipeline-bar-bg"><div class="pipeline-bar-fg" style="width: ${widthPercent}%;"></div></div><div class="pipeline-value">${count}</div></div>`;
-                    });
-                    stageContainer.innerHTML = stageHTML;
-                    const evolutions = ['De R1 para R2', 'De R2 para R3', 'De R3 para R4', 'De R4 para R5'];
-                    const evolutionCounts = evolutions.map(evo => data.filter(act => act.evolution === evo).length);
-                    const maxEvolutionCount = Math.max(...evolutionCounts, 1);
-                    let evolutionHTML = '';
-                    evolutions.forEach((evo, index) => {
-                        const count = evolutionCounts[index];
-                        const widthPercent = (count / maxEvolutionCount) * 100;
-                        evolutionHTML += `<div class="pipeline-item"><div class="pipeline-label">${evo.replace('De ', '').replace(' para ', ' > ')}</div><div class="pipeline-bar-bg"><div class="pipeline-bar-fg" style="width: ${widthPercent}%;"></div></div><div class="pipeline-value">${count}</div></div>`;
-                    });
-                    evolutionContainer.innerHTML = evolutionHTML;
-                };
-
-                const updateRanking = (data) => {
-                    const container = document.getElementById('ranking-container');
-                    const calculateRanking = (filteredData) => {
-                        const salesByCloser = filteredData.filter(act => act.deal_outcome === 'Ganha').reduce((acc, act) => {
-                            if (!acc[act.closer]) { acc[act.closer] = { total: 0, count: 0 }; }
-                            acc[act.closer].total += (act.sale_value || 0); 
-                            acc[act.closer].count++; 
-                            return acc;
-                        }, {});
-                        return Object.entries(salesByCloser).map(([name, d]) => ({ name, ...d })).sort((a, b) => b.total - a.total);
-                    };
-
-                    const rankingData = calculateRanking(data);
-                    let rankingHTML = '';
-                    if (rankingData.length === 0) {
-                        rankingHTML = '<p>Nenhuma venda registrada no período.</p>';
-                    } else {
-                        rankingData.forEach((closer, index) => {
-                            const initials = closer.name.split(' ').map(n => n[0]).join('');
-                            rankingHTML += `<div class="ranking-item"><div class="rank">#${index+1}</div><div class="avatar">${initials}</div><div class="info"><div class="name">${closer.name}</div><div class="details">${closer.count} vendas</div></div><div class="value">${formatCurrency(closer.total)}</div></div>`;
-                        });
-                    }
-                    container.innerHTML = rankingHTML;
-                };
-                
-                // --- Lógica da Tabela de Histórico e Edição (CORRIGIDA) ---
-                
-                // NOVA FUNÇÃO para filtrar localmente os dados do histórico
-                const filterHistoryActivitiesLocally = () => {
-                    const filters = {};
-                    document.querySelectorAll('#history-table-container .history-filter').forEach(f => {
-                        if (f.value && f.value !== 'Todos') filters[f.dataset.key] = f.value.toLowerCase();
-                    });
-
-                    const startDate = historyStartDateFilter.value ? new Date(historyStartDateFilter.value + 'T00:00:00') : null;
-                    const endDate = historyEndDateFilter.value ? new Date(historyEndDateFilter.value + 'T23:59:59') : null;
-                    const selectedTypes = Array.from(historyTypeFilter.querySelectorAll('input:checked')).map(cb => cb.value);
-
-                    return allActivities.filter(act => {
-                        const activityDate = new Date((act.sale_date || act.date) + 'T00:00:00');
-                        const dateMatch = (!startDate || activityDate >= startDate) && (!endDate || activityDate <= endDate);
-                        if (!dateMatch) return false;
-
-                        const typeMatch = selectedTypes.length === 0 || selectedTypes.includes(act.type);
-                        if (!typeMatch) return false;
-
-                        return Object.entries(filters).every(([key, value]) => {
-                            const actValue = act[key];
-                            return actValue != null && String(actValue).toLowerCase().includes(value);
-                        });
-                    });
-                };
-
-                const renderTable = () => { // Função agora é síncrona
-                    if (!document.querySelector('#history-table-container table')) {
-                        historyContainer.innerHTML = `
-                            <table>
-                                <thead>
-                                    <tr><th>Data</th><th>Closer</th><th>BDR</th><th>Lead</th><th>Canal</th><th>Faturamento</th><th>Qualificação</th><th>Status</th><th>Reunião Resgatada</th><th>Resultado</th><th>Vlr. Proposta</th><th>Vlr. Venda</th><th>Notas</th><th>Ações</th></tr>
-                                    <tr class="table-filters no-hover">
-                                        <td></td>
-                                        <td><select class="history-filter" data-key="closer"></select></td>
-                                        <td><input type="text" class="history-filter" data-key="bdr" placeholder="Filtrar..."></td>
-                                        <td><input type="text" class="history-filter" data-key="lead" placeholder="Filtrar..."></td>
-                                        <td><select class="history-filter" data-key="channel"></select></td>
-                                        <td><select class="history-filter" data-key="company_revenue"></select></td>
-                                        <td><select class="history-filter" data-key="qualification"></select></td>
-                                        <td><select class="history-filter" data-key="status"></select></td>
-                                        <td><select class="history-filter" data-key="reuniao_resgatada"><option value="">Todos</option><option>Sim</option><option>Não</option></select></td>
-                                        <td><select class="history-filter" data-key="deal_outcome"><option value="">Todos</option><option>Ganha</option><option>Perdida</option></select></td>
-                                        <td></td><td></td>
-                                        <td><input type="text" class="history-filter" data-key="notes" placeholder="Filtrar..."></td>
-                                        <td></td>
-                                    </tr>
-                                </thead>
-                                <tbody></tbody>
-                            </table>`;
-                        
-                        const getUniqueOptions = (key) => ['Todos', ...new Set(allActivities.map(act => act[key]).filter(Boolean))];
-                        const populateSelect = (selector, key) => {
-                            document.querySelector(selector).innerHTML = getUniqueOptions(key).map(opt => `<option value="${opt === 'Todos' ? '' : opt}">${opt}</option>`).join('');
-                        };
-
-                        populateSelect('.table-filters [data-key="closer"]', 'closer');
-                        populateSelect('.table-filters [data-key="channel"]', 'channel');
-                        populateSelect('.table-filters [data-key="company_revenue"]', 'company_revenue');
-                        populateSelect('.table-filters [data-key="qualification"]', 'qualification');
-                        populateSelect('.table-filters [data-key="status"]', 'status');
-
-                        document.querySelectorAll('.history-filter').forEach(filter => {
-                            filter.addEventListener('input', renderTable);
-                        });
-                    }
-
-                    const filteredActivities = filterHistoryActivitiesLocally(); // Usa a nova função de filtro local
-                    
-                    const finalTableBody = document.querySelector('#history-table-container table tbody');
-                    finalTableBody.innerHTML = '';
-                    filteredActivities.sort((a,b) => new Date(b.date) - new Date(a.date)).forEach(act => {
-                        const row = document.createElement('tr');
-                        row.dataset.id = act.id;
-                        
-                        const isOwner = act.closer_id === userId;
-                        const leadHasNoShow = allActivities.some(a => a.lead === act.lead && a.status === 'No Show');
-                        const dealIsClosed = allActivities.some(a => a.lead === act.lead && a.deal_outcome);
-                        let actionsHTML = '';
-
-                        if (isOwner && !dealIsClosed && !leadHasNoShow) {
-                            const hasHigherStage = allActivities.some(a => {
-                                if (a.lead !== act.lead || !a.type || !act.type || !a.type.startsWith('R') || !act.type.startsWith('R')) return false;
-                                return parseInt(a.type.substring(1)) > parseInt(act.type.substring(1));
-                            });
-                            if (!hasHigherStage) {
-                                actionsHTML = `<button class="end-deal-btn" data-lead="${act.lead}">Finalizar</button>`;
-                            }
-                        }
-
-                        const notes = act.notes || '';
-                        const maxLength = 50;
-                        let notesHTML = notes.length > maxLength 
-                            ? `<span class="notes-text-truncated">${notes.substring(0, maxLength)}...</span><span class="notes-text-full">${notes}</span><button class="toggle-notes-btn">Ver mais</button>` 
-                            : notes;
-                        
-                        const displayDate = act.sale_date || act.date;
-                        row.innerHTML = `<td>${new Date(displayDate + 'T00:00:00').toLocaleDateString('pt-BR')}</td><td>${act.closer}</td><td>${act.bdr || 'N/A'}</td><td>${act.lead}</td><td>${act.channel}</td><td>${act.company_revenue || 'N/A'}</td><td>${act.qualification}</td><td>${act.status}</td><td>${act.reuniao_resgatada || 'Não'}</td><td>${act.deal_outcome || '-'}</td><td>${act.proposal_value ? formatCurrency(act.proposal_value) : 'N/A'}</td><td>${act.sale_value ? formatCurrency(act.sale_value) : 'N/A'}</td><td class="notes-cell">${notesHTML}</td><td>${actionsHTML}</td>`;
-                        
-                        finalTableBody.appendChild(row);
-                    });
-                };
-                
-                clearHistoryFiltersBtn.addEventListener('click', () => {
-                    document.querySelectorAll('.history-filter').forEach(filter => filter.tagName.toLowerCase() === 'select' ? filter.selectedIndex = 0 : filter.value = '');
-                    historyDatePresetFilter.value = 'all_time';
-                    historyStartDateFilter.value = '';
-                    historyEndDateFilter.value = '';
-                    historyCustomDateFilters.classList.remove('visible');
-                    historyTypeFilter.querySelectorAll('input').forEach(cb => cb.checked = true);
-                    renderTable();
-                });
-
-                form.addEventListener('submit', async (e) => {
-                    e.preventDefault();
-                    const headerData = { date: document.getElementById('date-form').value, closer: userName, closer_id: userId };
-                    const lancamentoBlocks = document.querySelectorAll('.lancamento-block');
-                    const newActivitiesPayload = [];
-                    let formIsValid = true;
-
-                    lancamentoBlocks.forEach(block => {
-                        const blockId = block.id;
-                        const leadNameInput = document.getElementById(`lead-name-${blockId}`);
-                        const activityTypeSelect = document.getElementById(`activity-type-${blockId}`);
-                        leadNameInput.style.borderColor = '';
-                        activityTypeSelect.style.borderColor = '';
-
-                        if (!leadNameInput.value.trim()) {
-                            leadNameInput.style.borderColor = 'var(--error-color)';
-                            formIsValid = false;
-                        }
-                        if (!activityTypeSelect.value) {
-                            activityTypeSelect.style.borderColor = 'var(--error-color)';
-                            formIsValid = false;
-                        }
-
-                        if (formIsValid) {
-                            newActivitiesPayload.push({
-                                ...headerData, 
-                                lead: leadNameInput.value.trim(), 
-                                bdr: document.getElementById(`bdr-${blockId}`).value,
-                                channel: document.getElementById(`channel-${blockId}`).value, 
-                                sector: 'Agência', // Hardcoded
-                                type: activityTypeSelect.value, 
-                                status: document.getElementById(`activity-status-${blockId}`).value, 
-                                evolution: document.getElementById(`funnel-evolution-${blockId}`).value, 
-                                proposal_value: parseFloat(document.getElementById(`proposal-value-${blockId}`).value) || null,
-                                notes: document.getElementById(`notes-${blockId}`).value,
-                                qualification: document.getElementById(`qualification-${blockId}`).value,
-                                company_revenue: document.getElementById(`revenue-${blockId}`).value,
-                                proposal_sent: document.getElementById(`proposal-sent-${blockId}`).value,
-                                reuniao_resgatada: document.getElementById(`reuniao-resgatada-${blockId}`).value,
-                            });
-                        }
-                    });
-
-                    if (!formIsValid) {
-                        showNotification('Por favor, preencha os campos obrigatórios (Lead e Tipo de Reunião).', 'error');
-                        return;
-                    }
-
-                    if (lancamentoBlocks.length === 0) {
-                        showNotification('Adicione pelo menos um lançamento.', 'error');
-                        return;
-                    }
-                    
-                    const { error } = await supabaseClient.from('activities').insert(newActivitiesPayload);
-
-                    if (error) {
-                        console.error('Erro ao salvar:', error);
-                        showNotification(`Falha ao salvar: ${error.message}`, 'error');
-                    } else {
-                        showNotification(`${newActivitiesPayload.length} lançamento(s) salvo(s)!`, 'success');
-                        lancamentosContainer.innerHTML = '';
-                        createLancamentoBlock();
-                        await fetchInitialData(); // Recarrega todos os dados
-                    }
-                });
-
-                const openEditModal = (activityId) => {
-                    const activity = allActivities.find(act => act.id == activityId);
-                    if (!activity) return;
-                    document.getElementById('edit-activity-id').value = activity.id;
-                    document.getElementById('edit-date').value = activity.date;
-                    document.getElementById('edit-lead-name').value = activity.lead;
-                    document.getElementById('edit-bdr').value = activity.bdr;
-                    document.getElementById('edit-revenue').value = activity.company_revenue;
-                    document.getElementById('edit-channel').value = activity.channel;
-                    document.getElementById('edit-qualification').value = activity.qualification;
-                    document.getElementById('edit-activity-type').value = activity.type;
-                    document.getElementById('edit-activity-status').value = activity.status;
-                    document.getElementById('edit-proposal-sent').value = activity.proposal_sent;
-                    document.getElementById('edit-reuniao-resgatada').value = activity.reuniao_resgatada || 'Não';
-                    document.getElementById('edit-funnel-evolution').value = activity.evolution;
-                    document.getElementById('edit-proposal-value').value = activity.proposal_value;
-                    document.getElementById('edit-notes').value = activity.notes;
-                    editModal.classList.add('visible');
-                };
-
-                const closeEditModal = () => {
-                    editModal.classList.remove('visible');
-                };
-
-                historyContainer.addEventListener('click', async (e) => {
-                    const target = e.target;
-                    
-                    if (target.classList.contains('toggle-notes-btn')) {
-                        const cell = target.closest('td');
-                        const truncated = cell.querySelector('.notes-text-truncated');
-                        const full = cell.querySelector('.notes-text-full');
-                        const isExpanded = full.style.display === 'block';
-                        full.style.display = isExpanded ? 'none' : 'block';
-                        truncated.style.display = isExpanded ? 'block' : 'none';
-                        target.textContent = isExpanded ? 'Ver mais' : 'Ver menos';
-                        return;
-                    }
-                    
-                    const row = target.closest('tr[data-id]');
-                    if (row && !target.closest('button')) {
-                        openEditModal(row.dataset.id);
-                        return;
-                    }
-
-                    if (target.classList.contains('end-deal-btn')) {
-                        const leadName = target.dataset.lead;
-                        const leadActivities = allActivities.filter(act => act.lead === leadName).sort((a, b) => new Date(b.date) - new Date(a.date));
-                        
-                        if (leadActivities.length > 0) {
-                            const latestActivity = leadActivities[0];
-                            const { error } = await supabaseClient.from('activities').update({ deal_outcome: 'Perdida', sale_date: toISODateString(new Date()) }).eq('id', latestActivity.id);
-
-                            if (error) {
-                                showNotification(`Falha ao finalizar: ${error.message}`, 'error');
-                            } else {
-                                showNotification(`Negociação com ${leadName} foi finalizada.`, 'success');
-                                await fetchInitialData();
-                            }
-                        }
-                    }
-                });
-
-                modalCloseBtn.addEventListener('click', closeEditModal);
-                editModal.addEventListener('click', (e) => {
-                    if (e.target === editModal) closeEditModal();
-                });
-
-                editForm.addEventListener('submit', async (e) => {
-                    e.preventDefault();
-                    const id = document.getElementById('edit-activity-id').value;
-                    if (!id) {
-                        showNotification('ERRO: ID da atividade não encontrado.', 'error');
-                        return;
-                    }
-                    
-                    const updatedData = {
-                        date: document.getElementById('edit-date').value,
-                        lead: document.getElementById('edit-lead-name').value,
-                        bdr: document.getElementById('edit-bdr').value,
-                        company_revenue: document.getElementById('edit-revenue').value,
-                        channel: document.getElementById('edit-channel').value,
-                        sector: 'Agência', // Hardcoded
-                        qualification: document.getElementById('edit-qualification').value,
-                        type: document.getElementById('edit-activity-type').value,
-                        status: document.getElementById('edit-activity-status').value,
-                        proposal_sent: document.getElementById('edit-proposal-sent').value,
-                        reuniao_resgatada: document.getElementById('edit-reuniao-resgatada').value,
-                        evolution: document.getElementById('edit-funnel-evolution').value,
-                        proposal_value: parseFloat(document.getElementById('edit-proposal-value').value) || null,
-                        notes: document.getElementById('edit-notes').value,
-                    };
-
-                    const { data: updatedRecords, error } = await supabaseClient
-                        .from('activities')
-                        .update(updatedData)
-                        .eq('id', id)
-                        .select();
-
-                    if (error) {
-                        showNotification(`Falha ao salvar: ${error.message}`, 'error');
-                    } else {
-                        showNotification('Alterações salvas!', 'success');
-                        closeEditModal();
-
-                        if (updatedRecords && updatedRecords.length > 0) {
-                            const index = allActivities.findIndex(act => act.id == id);
-                            if (index !== -1) {
-                                allActivities[index] = updatedRecords[0];
-                            }
-                        }
-                        
-                        renderTable(); // Re-renderiza a tabela do histórico com os dados locais atualizados
-                    }
-                });
-                
-                // --- Lógica da Seção de Propostas ---
-                const renderPropostas = async () => {
-                    propostasContainer.innerHTML = '';
-                    const selectedCloser = propostasCloserFilter.value;
-
-                    // Busca propostas em aberto direto do Supabase
-                    let query = supabaseClient.from('activities')
-                        .select('*')
-                        .eq('proposal_sent', 'Sim')
-                        .is('deal_outcome', null);
-                    
-                    if (selectedCloser !== 'all') {
-                        query = query.eq('closer', selectedCloser);
-                    }
-                    
-                    const { data: openProposals, error } = await query;
-                    
-                    if(error) {
-                        console.error("Erro ao buscar propostas:", error);
-                        return;
-                    }
-                    
-                    // Agrupa por lead para mostrar apenas a última proposta
-                    const proposalsByLead = openProposals.reduce((acc, proposal) => {
-                        if (!acc[proposal.lead] || new Date(proposal.date) > new Date(acc[proposal.lead].date)) {
-                            acc[proposal.lead] = proposal;
-                        }
-                        return acc;
-                    }, {});
-
-                    const latestProposals = Object.values(proposalsByLead);
-
-                    if (latestProposals.length === 0) {
-                        propostasContainer.innerHTML = '<p>Nenhuma proposta em aberto para o filtro selecionado.</p>';
-                        return;
-                    }
-
-                    latestProposals.forEach(proposal => {
-                        const card = document.createElement('div');
-                        card.className = 'proposal-card';
-                        
-                        const isOwner = proposal.closer_id === userId;
-                        const actionsHTML = isOwner ? `
-                            <div class="proposal-actions">
-                                <button class="btn-ganha" data-id="${proposal.id}" data-value="${proposal.proposal_value}">Marcar como Vendida</button>
-                                <button class="btn-perdida" data-id="${proposal.id}">Marcar como Perdida</button>
-                            </div>` : '';
-                        
-                        card.innerHTML = `
-                            <div class="proposal-info">
-                                <div class="${isOwner ? 'lead-name editable' : 'lead-name'}" data-id="${proposal.id}">${proposal.lead}</div>
-                                <div class="details">
-                                    Valor: ${formatCurrency(proposal.proposal_value)} | Closer: ${proposal.closer} | Data: ${new Date(proposal.date + 'T00:00:00').toLocaleDateString('pt-BR')}
-                                </div>
-                            </div>
-                            ${actionsHTML}`;
-                        propostasContainer.appendChild(card);
-                    });
-                };
-
-                propostasContainer.addEventListener('click', async (e) => {
-                    const target = e.target;
-                    
-                    if (target.classList.contains('editable')) {
-                        openEditModal(target.dataset.id);
-                        return;
-                    }
-
-                    const button = target.closest('button[data-id]');
-                    if (!button) return;
-
-                    const id = button.dataset.id;
-                    let updatedData = {};
-                    const saleDate = toISODateString(new Date());
-
-                    if (button.classList.contains('btn-ganha')) {
-                        updatedData = { deal_outcome: 'Ganha', sale_value: parseFloat(button.dataset.value), sale_date: saleDate };
-                    } else if (button.classList.contains('btn-perdida')) {
-                        updatedData = { deal_outcome: 'Perdida', sale_date: saleDate };
-                    } else {
-                        return;
-                    }
-
-                    const { error } = await supabaseClient.from('activities').update(updatedData).eq('id', id);
-
-                    if (error) {
-                        showNotification(`Falha ao atualizar: ${error.message}`, 'error');
-                    } else {
-                        showNotification(`Proposta atualizada!`, 'success');
-                        await fetchInitialData(); // Recarrega tudo
-                    }
-                });
-
-                // --- Lógica da Seção de Recebíveis ---
-                const renderRecebiveis = async () => {
-                    const container = document.getElementById('recebiveis-table-container');
-                    const selectedCloser = recebiveisCloserFilter.value;
-                    const selectedStatus = recebiveisStatusFilter.value;
-                    
-                    const saleStartDate = recebiveisStartDateFilter.value;
-                    const saleEndDate = recebiveisEndDateFilter.value;
-                    const paymentStartDate = recebiveisPaymentStartDateFilter.value;
-                    const paymentEndDate = recebiveisPaymentEndDateFilter.value;
-                    
-                    let query = supabaseClient.from('activities').select('*').eq('deal_outcome', 'Ganha');
-                    if (selectedCloser !== 'all') query = query.eq('closer', selectedCloser);
-                    if (saleStartDate) query = query.gte('sale_date', saleStartDate);
-                    if (saleEndDate) query = query.lte('sale_date', saleEndDate);
-
-                    const { data: sales, error } = await query;
-                    if(error){ console.error("Erro ao buscar vendas:", error); return; }
-
-                    let finalSales = sales;
-
-                    if (paymentStartDate || paymentEndDate) {
-                         const relevantPayments = allPayments.filter(p => {
-                            if (!p.data_pagamento) return false;
-                            const paymentDate = new Date(p.data_pagamento);
-                            const startMatch = !paymentStartDate || paymentDate >= new Date(paymentStartDate);
-                            const endMatch = !paymentEndDate || paymentDate <= new Date(paymentEndDate);
-                            return startMatch && endMatch;
-                        });
-                        const relevantActivityIds = new Set(relevantPayments.map(p => p.activity_id));
-                        finalSales = finalSales.filter(sale => relevantActivityIds.has(sale.id));
-                    }
-                    
-                    const salesWithPaymentInfo = finalSales.map(sale => {
-                        const saleValue = sale.sale_value || 0;
-                        const paidValue = allPayments.filter(p => p.activity_id === sale.id).reduce((sum, p) => sum + (p.valor_pago || 0), 0);
-                        const balance = saleValue - paidValue;
-                        return {...sale, paidValue, balance};
-                    });
-
-                    let filteredSales = salesWithPaymentInfo;
-                    if (selectedStatus === 'paid') {
-                        filteredSales = salesWithPaymentInfo.filter(s => s.balance <= 0);
-                    } else if (selectedStatus === 'not_paid') {
-                        filteredSales = salesWithPaymentInfo.filter(s => s.balance > 0);
-                    }
-
-                    const totalVendido = sales.reduce((sum, sale) => sum + (sale.sale_value || 0), 0);
-                    const totalRecebido = salesWithPaymentInfo.reduce((sum, sale) => sum + sale.paidValue, 0);
-                    
-                    document.getElementById('recebiveis-total-vendido').textContent = formatCurrency(totalVendido);
-                    document.getElementById('recebiveis-valor-recebido').textContent = formatCurrency(totalRecebido);
-                    document.getElementById('recebiveis-saldo-pendente').textContent = formatCurrency(totalVendido - totalRecebido);
-                    
-                    let tableHTML = `<table><thead>...</thead><tbody>`; // Header omitido por brevidade
-                    if(filteredSales.length === 0){
-                         tableHTML += `<tr><td colspan="7" style="text-align: center;">Nenhuma venda encontrada.</td></tr>`;
-                    } else {
-                        filteredSales.sort((a,b) => new Date(b.sale_date) - new Date(a.sale_date)).forEach(sale => {
-                             const status = sale.balance <= 0 ? '<span class="status-pago">Pago</span>' : '<span class="status-pendente">Pendente</span>';
-                             tableHTML += `<tr class="recebiveis-row" data-id="${sale.id}"><td>${new Date(sale.sale_date + 'T00:00:00').toLocaleDateString('pt-BR')}</td><td>${sale.closer}</td><td>${sale.lead}</td><td>${formatCurrency(sale.sale_value)}</td><td>${formatCurrency(sale.paidValue)}</td><td>${formatCurrency(sale.balance)}</td><td>${status}</td></tr>`;
-                        });
-                    }
-                    tableHTML += `</tbody></table>`;
-                    container.innerHTML = `<table><thead><tr><th>Data Venda</th><th>Closer</th><th>Lead</th><th>Valor Venda</th><th>Valor Recebido</th><th>Saldo Devedor</th><th>Status</th></tr></thead><tbody>${tableHTML.split('<tbody>')[1]}`;
-                };
-
-                const openPaymentModal = (activityId) => {
-                    const activity = allActivities.find(act => act.id == activityId);
-                    if (!activity) return;
-
-                    paymentModalTitle.textContent = `Gerenciar Pagamentos para: ${activity.lead}`;
-                    paymentActivityIdInput.value = activity.id;
-
-                    const saleValue = activity.sale_value || 0;
-                    const activityPayments = allPayments.filter(p => p.activity_id === activity.id);
-                    const paidValue = activityPayments.reduce((sum, p) => sum + (p.valor_pago || 0), 0);
-                    const balance = saleValue - paidValue;
-
-                    paymentModalKpis.innerHTML = `<div class="kpi-card-small"><div class="title">Valor Total</div><div class="value">${formatCurrency(saleValue)}</div></div><div class="kpi-card-small"><div class="title">Total Pago</div><div class="value" style="color: var(--success-color);">${formatCurrency(paidValue)}</div></div><div class="kpi-card-small"><div class="title">Saldo Devedor</div><div class="value" style="color: var(--error-color);">${formatCurrency(balance)}</div></div>`;
-
-                    let paymentsHTML = `<table><thead><tr><th>Valor</th><th>Data</th><th>Meio</th><th>Ação</th></tr></thead><tbody>`;
-                    if(activityPayments.length > 0) {
-                        activityPayments.sort((a,b) => new Date(b.data_pagamento) - new Date(a.data_pagamento)).forEach(p => {
-                            paymentsHTML += `<tr><td>${formatCurrency(p.valor_pago)}</td><td>${new Date(p.data_pagamento + 'T00:00:00').toLocaleDateString('pt-BR')}</td><td>${p.meio_pagamento}</td><td><span class="delete-payment-btn" data-id="${p.id}">Excluir</span></td></tr>`;
-                        });
-                    } else {
-                        paymentsHTML += `<tr><td colspan="4" style="text-align:center;">Nenhum pagamento.</td></tr>`;
-                    }
-                    paymentsHTML += `</tbody></table>`;
-                    paymentsListContainer.innerHTML = paymentsHTML;
-                    
-                    document.getElementById('payment-date').value = toISODateString(new Date());
-                    paymentModal.classList.add('visible');
-                };
-
-                const closePaymentModal = () => {
-                    paymentModal.classList.remove('visible');
-                    addPaymentForm.reset();
-                };
-
-                paymentModalCloseBtn.addEventListener('click', closePaymentModal);
-                paymentModal.addEventListener('click', (e) => {
-                    if (e.target === paymentModal) closePaymentModal();
-                });
-
-                recebiveisContainer.addEventListener('click', (e) => {
-                    const row = e.target.closest('tr.recebiveis-row');
-                    if (row) openPaymentModal(row.dataset.id);
-                });
-
-                addPaymentForm.addEventListener('submit', async (e) => {
-                    e.preventDefault();
-                    const paymentData = {
-                        activity_id: parseInt(paymentActivityIdInput.value),
-                        valor_pago: parseFloat(document.getElementById('payment-amount').value),
-                        data_pagamento: document.getElementById('payment-date').value,
-                        meio_pagamento: document.getElementById('payment-method').value
-                    };
-
-                    const { data, error } = await supabaseClient.from('payments').insert([paymentData]).select();
-
-                    if(error) {
-                        showNotification(`Erro ao adicionar: ${error.message}`, 'error');
-                    } else {
-                        showNotification('Pagamento adicionado!', 'success');
-                        allPayments.push(data[0]);
-                        openPaymentModal(paymentData.activity_id);
-                        await renderRecebiveis();
-                        addPaymentForm.reset();
-                        document.getElementById('payment-date').value = toISODateString(new Date());
-                    }
-                });
-                
-                paymentsListContainer.addEventListener('click', async (e) => {
-                    if(e.target.classList.contains('delete-payment-btn')) {
-                        const paymentId = e.target.dataset.id;
-                        const confirmed = await showConfirm('Tem certeza que deseja excluir este pagamento?');
-                        
-                        if (confirmed) {
-                            const { error } = await supabaseClient.from('payments').delete().eq('id', paymentId);
-                            if(error) {
-                                showNotification(`Erro ao excluir: ${error.message}`, 'error');
-                            } else {
-                                showNotification('Pagamento excluído.', 'success');
-                                allPayments = allPayments.filter(p => p.id != paymentId);
-                                openPaymentModal(parseInt(paymentActivityIdInput.value));
-                                await renderRecebiveis();
-                            }
-                        }
-                    }
-                });
-
-                const handleDatePresetChange = (presetFilter, customFilters, startDateInput, endDateInput, callback) => {
-                    const preset = presetFilter.value;
-                    const today = new Date();
-                    let start = new Date(), end = new Date();
-
-                    if (preset === 'custom') {
-                        customFilters.classList.add('visible'); return;
-                    }
-                    customFilters.classList.remove('visible');
-
-                    switch(preset) {
-                        case 'today': break;
-                        case 'yesterday': start.setDate(today.getDate() - 1); end.setDate(today.getDate() - 1); break;
-                        case 'this_month': start = new Date(today.getFullYear(), today.getMonth(), 1); end = new Date(today.getFullYear(), today.getMonth() + 1, 0); break;
-                        case 'last_month': start = new Date(today.getFullYear(), today.getMonth() - 1, 1); end = new Date(today.getFullYear(), today.getMonth(), 0); break;
-                        case 'last7days': start.setDate(today.getDate() - 6); break;
-                        case 'all_time': start = null; end = null; break;
-                    }
-                    
-                    startDateInput.value = start ? toISODateString(start) : '';
-                    endDateInput.value = end ? toISODateString(end) : '';
-                    callback();
-                };
-
-                // --- Lógica dos Filtros e Navegação ---
-                datePresetFilter.addEventListener('change', () => handleDatePresetChange(datePresetFilter, customDateFilters, startDateFilter, endDateFilter, updateAllPanels));
-                [startDateFilter, endDateFilter].forEach(el => el.addEventListener('change', () => { datePresetFilter.value = 'custom'; customDateFilters.classList.add('visible'); updateAllPanels(); }));
-                
-                historyDatePresetFilter.addEventListener('change', () => handleDatePresetChange(historyDatePresetFilter, historyCustomDateFilters, historyStartDateFilter, historyEndDateFilter, renderTable));
-                [historyStartDateFilter, historyEndDateFilter].forEach(el => el.addEventListener('change', () => { historyDatePresetFilter.value = 'custom'; historyCustomDateFilters.classList.add('visible'); renderTable(); }));
-
-                recebiveisDatePresetFilter.addEventListener('change', () => handleDatePresetChange(recebiveisDatePresetFilter, recebiveisCustomDateFilters, recebiveisStartDateFilter, recebiveisEndDateFilter, renderRecebiveis));
-                [recebiveisStartDateFilter, recebiveisEndDateFilter].forEach(el => el.addEventListener('change', () => { recebiveisDatePresetFilter.value = 'custom'; recebiveisCustomDateFilters.classList.add('visible'); renderRecebiveis(); }));
-                
-                recebiveisPaymentDatePresetFilter.addEventListener('change', () => handleDatePresetChange(recebiveisPaymentDatePresetFilter, recebiveisPaymentCustomDateFilters, recebiveisPaymentStartDateFilter, recebiveisPaymentEndDateFilter, renderRecebiveis));
-                [recebiveisPaymentStartDateFilter, recebiveisPaymentEndDateFilter].forEach(el => el.addEventListener('change', () => { recebiveisPaymentDatePresetFilter.value = 'custom'; recebiveisPaymentCustomDateFilters.classList.add('visible'); renderRecebiveis(); }));
-
-                userFilter.addEventListener('change', updateAllPanels);
-                channelFilterDash.addEventListener('change', updateAllPanels);
-                propostasCloserFilter.addEventListener('change', renderPropostas);
-                historyTypeFilter.addEventListener('change', renderTable);
-                recebiveisCloserFilter.addEventListener('change', renderRecebiveis);
-                recebiveisStatusFilter.addEventListener('change', renderRecebiveis);
-
-
-                navLinks.forEach(link => {
-                    link.addEventListener('click', (e) => {
-                        e.preventDefault();
-                        navLinks.forEach(l => l.classList.remove('active'));
-                        contentSections.forEach(s => s.classList.remove('active'));
-                        const targetId = link.getAttribute('data-target');
-                        document.getElementById(targetId).classList.add('active');
-                        link.classList.add('active');
-                    });
-                });
-                
-                const populateCloserFilters = async () => {
-                    const { data: profiles, error } = await supabaseClient.from('profiles').select('full_name');
-                    if (error) { console.error('Erro ao buscar perfis:', error); return; }
-
-                    const closers = profiles.map(p => p.full_name).filter(Boolean);
-                    
-                    [userFilter, propostasCloserFilter, recebiveisCloserFilter].forEach(filter => {
-                        filter.innerHTML = '<option value="all">Todos os Usuários</option>';
-                        closers.forEach(closer => filter.innerHTML += `<option value="${closer}">${closer}</option>`);
-                    });
-                    
-                    closerNameForm.innerHTML = `<option value="${userName}">${userName}</option>`;
-                    closerNameForm.disabled = true;
-                };
-
-                // --- Inicialização ---
-                createLancamentoBlock();
-                // Mova esta chamada para ANTES de buscar os dados para que o filtro inicial seja aplicado
-                handleDatePresetChange(datePresetFilter, customDateFilters, startDateFilter, endDateFilter, () => {});
-                await fetchInitialData();
-            };
-
-            // --- Lógica de Autenticação ---
-            showSignupBtn.addEventListener('click', () => {
-                loginSection.style.display = 'none';
-                signupSection.style.display = 'flex';
-            });
-
-            showLoginBtn.addEventListener('click', () => {
-                signupSection.style.display = 'none';
-                loginSection.style.display = 'flex';
-            });
-
-            loginForm.addEventListener('submit', async (e) => {
-                e.preventDefault();
-                const email = document.getElementById('email').value;
-                const password = document.getElementById('password').value;
-
-                const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
-
-                if (error) {
-                    loginErrorMessage.textContent = 'E-mail ou palavra-passe inválidos.';
-                    loginErrorMessage.style.display = 'block';
-                } else {
-                    await startApp(data.user);
-                }
-            });
-            
-            signupForm.addEventListener('submit', async (e) => {
-                e.preventDefault();
-                const name = document.getElementById('signup-name').value;
-                const email = document.getElementById('signup-email').value;
-                const password = document.getElementById('signup-password').value;
-
-                const { data, error } = await supabaseClient.auth.signUp({
-                    email: email,
-                    password: password,
-                    options: { data: { full_name: name } }
-                });
-
-                if (error) {
-                    signupErrorMessage.textContent = error.message;
-                    signupErrorMessage.style.display = 'block';
-                } else {
-                    showNotification('Registo efetuado com sucesso! Por favor, faça login.', 'success');
-                    signupSection.style.display = 'none';
-                    loginSection.style.display = 'flex';
-                }
-            });
-
-            // Verifica a sessão ao carregar a página
-            const checkSession = async () => {
-                const { data: { session } } = await supabaseClient.auth.getSession();
-                if (session) {
-                    await startApp(session.user);
-                } else {
-                    loginSection.style.display = 'flex';
-                    appSection.style.display = 'none';
-                }
-            };
-
-            await checkSession();
-        });
-    </script>
+            const allVisibleChecked = state.rows.length > 0 && state.selectedIds.length === state.rows.length;
+            $('#selectAllCheckbox').checked = allVisibleChecked;
+
+            updateBulkActionsUI();
+        }
+    });
+
+    $('#btnBulkDelete').addEventListener('click', async () => {
+        const count = state.selectedIds.length;
+        if (count === 0) return;
+        if (!confirm(`Confirma excluir os ${count} leads selecionados?`)) return;
+
+        try {
+            const { error } = await supabase.from('leads').delete().in('id', state.selectedIds);
+            if (error) throw error;
+            showToast(`${count} lead${count > 1 ? 's' : ''} excluído${count > 1 ? 's' : ''}.`);
+            await fetchLeads(); // This will also hide the bar and uncheck 'select all'
+        } catch (err) {
+            console.error(err);
+            showToast('Erro ao excluir leads', 'err');
+        }
+    });
+
+    $('#btnBulkEdit').addEventListener('click', () => {
+        $('#bulkEditModal').classList.remove('hidden');
+    });
+
+    $('#bulkEditModalClose').addEventListener('click', () => {
+        $('#bulkEditModal').classList.add('hidden');
+    });
+
+    $('#bulkEditForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const newSource = $('#bulkEditSource').value;
+        const count = state.selectedIds.length;
+
+        if (!newSource) {
+            showToast('Nenhuma alteração selecionada.', 'err');
+            return;
+        }
+        if (count === 0) return;
+
+        try {
+            const { error } = await supabase.from('leads').update({ source: newSource }).in('id', state.selectedIds);
+            if (error) throw error;
+            showToast(`Origem de ${count} lead${count > 1 ? 's' : ''} atualizada.`);
+            $('#bulkEditModal').classList.add('hidden');
+            await fetchLeads();
+        } catch (err) {
+            console.error(err);
+            showToast('Erro ao atualizar leads', 'err');
+        }
+    });
+
+
+    // ==== INIT ===============================================================
+    (async function start() {
+      applyTheme();
+      await fetchLeads();
+    })();
+  </script>
 </body>
 </html>
 
