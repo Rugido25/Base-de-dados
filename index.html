@@ -926,7 +926,12 @@
             const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR6d3pnYnVsZ2ZpaWJnb2RtaWdlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTE2MzUyNjYsImV4cCI6MjA2NzIxMTI2Nn0.5BmYUgPf1IpOGjgaRtKfgssZr_iIsSflNd3hxEZnwb0';
             
             const { createClient } = window.supabase;
-            const supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+            // CORREÇÃO: Desativar persistência de sessão para funcionar em iframes
+            const supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+                auth: {
+                    persistSession: false
+                }
+            });
 
             // --- Elementos Globais ---
             const loginSection = document.getElementById('login-section');
